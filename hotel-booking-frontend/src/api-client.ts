@@ -297,3 +297,7 @@ export const fetchAllHotels = async () => {
   const response = await axiosInstance.get("/api/admin/hotels");
   return response.data;
 };
+export const fetchAllSubscriptions = async () => {
+  const response = await axiosInstance.get("/api/admin/subscriptions");
+  return response.data;
+};

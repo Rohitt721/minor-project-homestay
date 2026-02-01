@@ -1,4 +1,5 @@
 
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import * as apiClient from "../api-client";
 import {
@@ -17,13 +18,313 @@ import {
     CheckCircle2,
     Sparkles,
     LayoutDashboard,
-    Hotel
+    Hotel,
+    CreditCard,
+    Calendar,
+    Activity,
+    Zap,
+    Filter,
+    Clock,
+    MoreVertical,
+    Download
 } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import useAppContext from "../hooks/useAppContext";
+
+const SubscriptionsSection = () => {
+    const { showToast } = useAppContext();
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "EXPIRED">("ALL");
+    const [selectedSub, setSelectedSub] = useState<any | null>(null);
+
+    const { data: rawSubscriptions, isLoading } = useQuery("allSubscriptions", apiClient.fetchAllSubscriptions);
+
+    const subscriptions = rawSubscriptions?.map((sub: any) => ({
+        id: sub._id,
+        ownerName: sub.userId ? `${sub.userId.firstName} ${sub.userId.lastName}` : 'Unknown User',
+        email: sub.userId?.email || 'N/A',
+        plan: sub.plan,
+        status: sub.status,
+        startDate: sub.startDate,
+        endDate: sub.endDate,
+        paymentStatus: 'PAID',
+        amount: sub.plan === 'MONTHLY' ? '₹4,999' : '₹49,999'
+    })) || [];
+
+    const filteredSubs = subscriptions.filter((sub: any) => {
+        const matchesSearch = sub.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) || sub.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesFilter = filterStatus === "ALL" || sub.status.toUpperCase() === filterStatus;
+        return matchesSearch && matchesFilter;
+    });
+
+    const activeCount = subscriptions.filter((s: any) => s.status === 'ACTIVE').length;
+    const expiredCount = subscriptions.filter((s: any) => s.status === 'EXPIRED').length;
+
+    // Calculate total revenue based on active plans (Mock calculation for now as we don't store payment history yet)
+    const totalRevenue = subscriptions.reduce((acc: number, sub: any) => {
+        return acc + (sub.plan === 'MONTHLY' ? 4999 : 49999);
+    }, 0);
+
+    const handleAction = (id: string, action: 'ACTIVATE' | 'DEACTIVATE' | 'EXTEND') => {
+        // In a real app, this would call a mutation
+        const actionText = action === 'EXTEND' ? 'extended by 30 days' : action === 'ACTIVATE' ? 'activated' : 'deactivated';
+        showToast({ title: "Action Simulated", description: `Subscription would be ${actionText} (Backend integration pending)`, type: "SUCCESS" });
+    };
+
+    if (isLoading) {
+        return <div className="p-20 text-center text-gray-400 animate-pulse">Loading subscriptions...</div>;
+    }
+
+    return (
+        <div className="space-y-8">
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-emerald-500/20 rounded-xl">
+                                <Activity className="w-6 h-6 text-emerald-400" />
+                            </div>
+                            <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Live Now</Badge>
+                        </div>
+                        <h3 className="text-3xl font-black text-white mb-1">{activeCount}</h3>
+                        <p className="text-sm text-gray-400 font-medium">Active Subscriptions</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-red-500/20 rounded-xl">
+                                <Clock className="w-6 h-6 text-red-400" />
+                            </div>
+                            <Badge className="bg-red-500/20 text-red-300 border border-red-500/30">Action Needed</Badge>
+                        </div>
+                        <h3 className="text-3xl font-black text-white mb-1">{expiredCount}</h3>
+                        <p className="text-sm text-gray-400 font-medium">Expired / Inactive</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
+                    <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="p-3 bg-blue-500/20 rounded-xl">
+                                <CreditCard className="w-6 h-6 text-blue-400" />
+                            </div>
+                            <Badge className="bg-blue-500/20 text-blue-300 border border-blue-500/30">Total Value</Badge>
+                        </div>
+                        <h3 className="text-3xl font-black text-white mb-1">₹{(totalRevenue / 1000).toFixed(1)}k</h3>
+                        <p className="text-sm text-gray-400 font-medium">Est. Revenue Value</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Controls */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/10">
+                <div className="relative w-full md:w-96">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+                    <input
+                        type="text"
+                        placeholder="Search owners, emails..."
+                        className="w-full pl-10 pr-4 py-3 bg-black/20 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-500 text-sm font-medium"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
+                    {(['ALL', 'ACTIVE', 'EXPIRED'] as const).map((status) => (
+                        <button
+                            key={status}
+                            onClick={() => setFilterStatus(status)}
+                            className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${filterStatus === status
+                                ? 'bg-white text-black shadow-lg shadow-white/10'
+                                : 'bg-black/20 text-gray-400 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            {status}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* List */}
+            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-white/5">
+                        <thead className="bg-white/5">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Subscriber</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Current Plan</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Validity</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {filteredSubs.map((sub) => (
+                                <tr key={sub.id} className="hover:bg-white/5 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <div className="text-sm font-bold text-white">{sub.ownerName}</div>
+                                            <div className="text-xs text-gray-500 font-mono">{sub.email}</div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <Badge variant="outline" className="border-white/10 text-gray-300 bg-white/5">
+                                            {sub.plan}
+                                        </Badge>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide border ${sub.status === 'ACTIVE'
+                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                                            }`}>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${sub.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></div>
+                                            {sub.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-xs text-gray-300">
+                                            <span className="text-gray-500">Ends:</span> {new Date(sub.endDate).toLocaleDateString()}
+                                        </div>
+                                        <div className="text-[10px] text-gray-600 mt-0.5 font-mono">
+                                            Started: {new Date(sub.startDate).toLocaleDateString()}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/10">
+                                                    <MoreVertical className="w-4 h-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-48 bg-gray-900 border border-white/10 text-white backdrop-blur-xl">
+                                                <DropdownMenuItem className="text-xs font-medium cursor-pointer focus:bg-white/10" onClick={() => setSelectedSub(sub)}>
+                                                    <FileText className="w-3.5 h-3.5 mr-2 text-blue-400" /> View Details
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-xs font-medium cursor-pointer focus:bg-white/10" onClick={() => handleAction(sub.id, 'EXTEND')}>
+                                                    <Calendar className="w-3.5 h-3.5 mr-2 text-emerald-400" /> Extend (+30 Days)
+                                                </DropdownMenuItem>
+                                                {sub.status === 'ACTIVE' ? (
+                                                    <DropdownMenuItem className="text-xs font-medium cursor-pointer focus:bg-white/10 text-red-400 focus:text-red-300" onClick={() => handleAction(sub.id, 'DEACTIVATE')}>
+                                                        <XCircle className="w-3.5 h-3.5 mr-2" /> Deactivate Plan
+                                                    </DropdownMenuItem>
+                                                ) : (
+                                                    <DropdownMenuItem className="text-xs font-medium cursor-pointer focus:bg-white/10 text-emerald-400 focus:text-emerald-300" onClick={() => handleAction(sub.id, 'ACTIVATE')}>
+                                                        <Zap className="w-3.5 h-3.5 mr-2" /> Activate Plan
+                                                    </DropdownMenuItem>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Details Modal (Simplified as an overlay for now) */}
+            {selectedSub && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-[#0f172a] border border-white/10 rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-blue-600/20 to-purple-600/20 pointer-events-none"></div>
+                        <div className="p-8 relative">
+                            <button
+                                onClick={() => setSelectedSub(null)}
+                                className="absolute top-4 right-4 p-2 rounded-full bg-black/20 hover:bg-white/10 text-gray-400 hover:text-white transition-colors border border-white/5"
+                            >
+                                <XCircle className="w-5 h-5" />
+                            </button>
+
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl font-black text-white shadow-xl">
+                                    {selectedSub.ownerName[0]}
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-white">{selectedSub.ownerName}</h3>
+                                    <p className="text-gray-400 font-medium">{selectedSub.email}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Current Plan</p>
+                                        <p className="text-lg font-bold text-white">{selectedSub.plan}</p>
+                                    </div>
+                                    <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Amount Paid</p>
+                                        <p className="text-lg font-bold text-emerald-400">{selectedSub.amount}</p>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-400">Subscription Status</span>
+                                        <Badge className={`${selectedSub.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
+                                            {selectedSub.status}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-400">Start Date</span>
+                                        <span className="text-sm font-bold text-white">{new Date(selectedSub.startDate).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-400">Expiration Date</span>
+                                        <span className="text-sm font-bold text-white">{new Date(selectedSub.endDate).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                                        <span className="text-sm text-gray-400">Payment Status</span>
+                                        <span className="text-sm font-black text-emerald-400 uppercase flex items-center gap-1">
+                                            <CheckCircle2 className="w-3 h-3" /> {selectedSub.paymentStatus}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <Button
+                                        className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold h-12"
+                                        onClick={() => handleAction(selectedSub.id, 'EXTEND')}
+                                    >
+                                        Extend 30 Days
+                                    </Button>
+                                    {selectedSub.status === 'ACTIVE' ? (
+                                        <Button
+                                            className="flex-1 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/50 font-bold h-12"
+                                            onClick={() => handleAction(selectedSub.id, 'DEACTIVATE')}
+                                        >
+                                            Deactivate
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/50 font-bold h-12"
+                                            onClick={() => handleAction(selectedSub.id, 'ACTIVATE')}
+                                        >
+                                            Activate
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const VerificationsSection = () => {
     const { showToast } = useAppContext();
@@ -197,7 +498,12 @@ const AdminDashboard = () => {
     const { data: verifications } = useQuery("pendingVerifications", apiClient.fetchPendingVerifications);
 
     const [searchTerm, setSearchTerm] = useState("");
-    const [activeTab, setActiveTab] = useState<"overview" | "verifications" | "users" | "hotels">("overview");
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = (searchParams.get("tab") as "overview" | "verifications" | "users" | "hotels" | "subscriptions") || "overview";
+
+    const setActiveTab = (tab: "overview" | "verifications" | "users" | "hotels" | "subscriptions") => {
+        setSearchParams({ tab });
+    };
 
     const filteredUsers = users?.filter((u: any) =>
         u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -209,14 +515,7 @@ const AdminDashboard = () => {
         h.city?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const pendingCount = verifications?.length || 0;
 
-    const tabs = [
-        { id: "overview", label: "Overview", icon: LayoutDashboard },
-        { id: "verifications", label: "Verifications", icon: ShieldAlert, badge: pendingCount },
-        { id: "users", label: "Users", icon: Users },
-        { id: "hotels", label: "Hotels", icon: Hotel }
-    ];
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black">
@@ -244,32 +543,7 @@ const AdminDashboard = () => {
                     </div>
                 </header>
 
-                {/* Tabs Navigation */}
-                <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-2 flex gap-2">
-                    {tabs.map((tab) => {
-                        const Icon = tab.icon;
-                        const hasBadge = (tab as any).badge && (tab as any).badge > 0;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all relative ${activeTab === tab.id
-                                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg shadow-blue-500/30"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                                    }`}
-                            >
-                                <Icon className="w-5 h-5" />
-                                {tab.label}
-                                {hasBadge && (
-                                    <div className="absolute -top-1 -right-1 flex items-center gap-1 bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-full shadow-lg shadow-red-500/50">
-                                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
-                                        {(tab as any).badge}
-                                    </div>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
+
 
                 {/* Tab Content */}
                 {activeTab === "overview" && (
@@ -324,7 +598,7 @@ const AdminDashboard = () => {
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer" onClick={() => setActiveTab("verifications")}>
                                 <CardContent className="p-8">
                                     <div className="flex items-center gap-4">
@@ -354,6 +628,21 @@ const AdminDashboard = () => {
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            <Card className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer" onClick={() => setActiveTab("subscriptions")}>
+                                <CardContent className="p-8">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-gradient-to-br from-blue-500 to-cyan-600 p-4 rounded-2xl shadow-lg shadow-blue-500/50">
+                                            <CreditCard className="w-8 h-8 text-white" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-xl font-black text-white mb-1">Subscriptions</h3>
+                                            <p className="text-sm text-gray-400">Manage plans & revenue</p>
+                                        </div>
+                                        <ChevronRight className="w-6 h-6 text-gray-500" />
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
                 )}
@@ -370,6 +659,21 @@ const AdminDashboard = () => {
                             </div>
                         </div>
                         <VerificationsSection />
+                    </div>
+                )}
+
+                {activeTab === "subscriptions" && (
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-gradient-to-br from-blue-500 to-cyan-600 p-2 rounded-xl text-white shadow-lg shadow-blue-500/50">
+                                <CreditCard className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-white tracking-tight">Subscription Management</h2>
+                                <p className="text-sm text-gray-400 font-medium italic">Monitor revenue, plans, and subscriber status.</p>
+                            </div>
+                        </div>
+                        <SubscriptionsSection />
                     </div>
                 )}
 

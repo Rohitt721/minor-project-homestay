@@ -3,8 +3,19 @@ import verifyToken from "../middleware/auth";
 import { verifyAdmin } from "../middleware/adminAuth";
 import User from "../models/user";
 import Hotel from "../models/hotel";
+import Subscription from "../models/subscription";
 
 const router = express.Router();
+
+// Get All Subscriptions
+router.get("/subscriptions", verifyToken, verifyAdmin, async (req: Request, res: Response) => {
+    try {
+        const subscriptions = await Subscription.find().populate("userId", "firstName lastName email");
+        res.json(subscriptions);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching subscriptions" });
+    }
+});
 
 // Get System Stats
 router.get("/stats", verifyToken, verifyAdmin, async (req: Request, res: Response) => {
