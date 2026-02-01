@@ -306,3 +306,8 @@ export const fetchOwnerRankings = async () => {
   const response = await axiosInstance.get("/api/rankings/owners");
   return response.data;
 };
+
+export const submitReview = async (reviewData: any) => {
+  const response = await axiosInstance.post("/api/reviews", reviewData);
+  return response.data;
+};
