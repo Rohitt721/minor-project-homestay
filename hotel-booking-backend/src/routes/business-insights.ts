@@ -184,48 +184,43 @@ router.get("/dashboard", verifyToken, async (req: Request, res: Response) => {
       new Date(b.createdAt) >= thirtyDaysAgo
     ).length;
 
-    // Hotel performance metrics (Filtered)
-    const hotelPerformance = await Booking.aggregate([
-      { $match: { hotelId: { $in: hotelIds.map(id => id.toString()) } } },
+    // Hotel performance metrics (strictly filtered to owner)
+    const hotelPerformance = await Hotel.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       {
-        $group: {
-          _id: "$hotelId",
-          bookingCount: { $sum: 1 },
-          totalRevenue: { $sum: "$totalCost" },
-          cancelledCount: {
-            $sum: { $cond: [{ $in: ["$status", ["CANCELLED", "REJECTED"]] }, 1, 0] }
-          }
-        },
-      },
-      {
-        $addFields: {
-          hotelIdObjectId: { $toObjectId: "$_id" }
+        $lookup: {
+          from: "bookings",
+          localField: "_id",
+          foreignField: "hotelId",
+          as: "hotelBookings"
         }
       },
       {
-        $lookup: {
-          from: "hotels",
-          localField: "hotelIdObjectId",
-          foreignField: "_id",
-          as: "hotel",
-        },
-      },
-      {
-        $unwind: "$hotel",
-      },
-      {
         $project: {
-          _id: "$hotel._id",
-          name: "$hotel.name",
-          city: "$hotel.city",
-          type: "$hotel.type",
-          starRating: "$hotel.starRating",
-          pricePerNight: "$hotel.pricePerNight",
-          bookingCount: 1,
-          totalRevenue: 1,
-          cancelledCount: 1,
-          occupancy: { $multiply: [{ $divide: ["$bookingCount", 30] }, 100] } // Mock occupancy per hotel
-        },
+          _id: 1,
+          name: 1,
+          city: 1,
+          type: 1,
+          starRating: 1,
+          pricePerNight: 1,
+          bookingCount: { $size: "$hotelBookings" },
+          totalRevenue: { $sum: "$hotelBookings.totalCost" },
+          cancelledCount: {
+            $size: {
+              $filter: {
+                input: "$hotelBookings",
+                as: "b",
+                cond: { $in: ["$$b.status", ["CANCELLED", "REJECTED"]] }
+              }
+            }
+          },
+          occupancy: {
+            $multiply: [
+              { $divide: [{ $size: "$hotelBookings" }, 30] },
+              100
+            ]
+          }
+        }
       },
       {
         $sort: { totalRevenue: -1 },
