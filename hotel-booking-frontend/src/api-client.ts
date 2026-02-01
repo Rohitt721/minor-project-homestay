@@ -283,3 +283,17 @@ export const updateVerificationStatus = async (userId: string, status: "VERIFIED
   return response.data;
 };
 
+export const fetchAdminStats = async () => {
+  const response = await axiosInstance.get("/api/admin/stats");
+  return response.data;
+};
+
+export const fetchAllUsers = async () => {
+  const response = await axiosInstance.get("/api/admin/users");
+  return response.data;
+};
+
+export const fetchAllHotels = async () => {
+  const response = await axiosInstance.get("/api/admin/hotels");
+  return response.data;
+};
