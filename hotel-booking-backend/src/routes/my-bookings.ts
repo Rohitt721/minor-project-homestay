@@ -99,6 +99,46 @@ router.post(
   }
 );
 
+router.post(
+  "/:bookingId/cancel",
+  verifyToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { bookingId } = req.params;
+      const { reason } = req.body;
+
+      // Find and update booking status to CANCELLED
+      // Only allow cancellation if it's the user's own booking and not already cancelled
+      const booking = await Booking.findOneAndUpdate(
+        {
+          _id: bookingId,
+          userId: req.userId,
+          status: { $nin: ["CANCELLED", "REJECTED", "COMPLETED", "REFUNDED"] },
+        },
+        {
+          status: "CANCELLED",
+          paymentStatus: "refunded", // Simplification: mark as refunded in dummy mode
+          cancellationReason: reason || "User cancelled",
+        },
+        { new: true }
+      );
+
+      if (!booking) {
+        return res.status(404).json({
+          message:
+            "Booking not found or cannot be cancelled (might be already completed/cancelled)",
+        });
+      }
+
+      console.log(`✅ Booking ${bookingId} cancelled by user ${req.userId}`);
+      res.status(200).json({ message: "Booking cancelled successfully", booking });
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      res.status(500).json({ message: "Failed to cancel booking" });
+    }
+  }
+);
+
 async function uploadToDataURI(file: Express.Multer.File) {
   const b64 = Buffer.from(file.buffer as Uint8Array).toString("base64");
   const dataURI = `data:${file.mimetype};base64,${b64}`;

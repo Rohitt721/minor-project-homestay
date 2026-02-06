@@ -87,7 +87,36 @@ router.get(
     }
   }
 );
+router.get(
+  "/:id/availability",
+  [param("id").notEmpty().withMessage("Hotel ID is required")],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
+    try {
+      const hotelId = req.params.id;
+      // Fetch all non-cancelled/non-rejected bookings
+      const bookings = await Booking.find({
+        hotelId,
+        status: { $nin: ["CANCELLED", "REJECTED", "REFUNDED"] },
+      }).select("checkIn checkOut");
+
+      // Transform into a simple array of date ranges
+      const bookedDates = bookings.map((booking) => ({
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+      }));
+
+      res.status(200).json(bookedDates);
+    } catch (error) {
+      console.error("Error fetching availability:", error);
+      res.status(500).json({ message: "Error fetching availability" });
+    }
+  }
+);
 
 
 router.post(
@@ -97,6 +126,26 @@ router.post(
     try {
       // In dummy mode, we don't verify with external providers
       console.log("📝 Processing dummy booking for hotel:", req.params.hotelId);
+
+      const { checkIn, checkOut, totalCost } = req.body;
+
+      // 1. Double-booking prevention: Check if dates are already booked
+      const existingBooking = await Booking.findOne({
+        hotelId: req.params.hotelId,
+        status: { $nin: ["CANCELLED", "REJECTED", "REFUNDED"] },
+        $or: [
+          {
+            checkIn: { $lt: new Date(checkOut) },
+            checkOut: { $gt: new Date(checkIn) },
+          },
+        ],
+      });
+
+      if (existingBooking) {
+        return res.status(400).json({
+          message: "These dates are no longer available. Please select different dates.",
+        });
+      }
 
       const newBooking: BookingType = {
         ...req.body,

@@ -14,7 +14,9 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { Calendar, Users, User, Baby, CreditCard } from "lucide-react";
+import { Calendar, Users, User, Baby, CreditCard, Loader2 } from "lucide-react";
+import { useQuery } from "react-query";
+import * as apiClient from "../../api-client";
 
 type Props = {
   hotelId: string;
@@ -34,6 +36,15 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Fetch real-time availability
+  const { data: bookedRanges, isLoading: isAvailabilityLoading } = useQuery(
+    ["fetchHotelAvailability", hotelId],
+    () => apiClient.fetchHotelAvailability(hotelId),
+    {
+      refetchInterval: 30000, // Refresh every 30 seconds for dynamic updates
+    }
+  );
+
   const {
     watch,
     register,
@@ -51,6 +62,32 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
 
   const checkIn = watch("checkIn");
   const checkOut = watch("checkOut");
+
+  // Helper to check if a single date is booked
+  const isDateBooked = (date: Date) => {
+    if (!bookedRanges) return false;
+    return bookedRanges.some((range) => {
+      const start = new Date(range.checkIn);
+      const end = new Date(range.checkOut);
+      // Reset hours to compare only dates
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      const s = new Date(start);
+      s.setHours(0, 0, 0, 0);
+      const e = new Date(end);
+      e.setHours(0, 0, 0, 0);
+
+      return d >= s && d < e;
+    });
+  };
+
+  // Helper for DatePicker dayClassName
+  const getDayClass = (date: Date) => {
+    if (isDateBooked(date)) {
+      return "booked-date";
+    }
+    return "available-date";
+  };
 
   // Calculate number of nights
   let numberOfNights = 1;
@@ -76,6 +113,12 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
   };
 
   const onSubmit = (data: GuestInfoFormData) => {
+    // Final check before navigating
+    if (isDateBooked(data.checkIn)) {
+      alert("The selected check-in date is already booked. Please choose another.");
+      return;
+    }
+
     search.saveSearchValues(
       "",
       data.checkIn,
@@ -102,43 +145,39 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
             border-bottom: 1px solid #e5e7eb !important;
             border-radius: 8px 8px 0 0 !important;
           }
-          .react-datepicker__current-month {
-            color: #374151 !important;
-            font-weight: 600 !important;
-          }
-          .react-datepicker__day-name {
-            color: #6b7280 !important;
-            font-weight: 500 !important;
-          }
           .react-datepicker__day {
             color: #374151 !important;
             border-radius: 6px !important;
             margin: 2px !important;
           }
-          .react-datepicker__day:hover {
-            background-color: #dbeafe !important;
-            color: #1e40af !important;
+          /* Custom status classes */
+          .available-date {
+            background-color: #f0fdf4 !important; /* light green */
+            color: #166534 !important;
           }
+          .available-date:hover {
+            background-color: #dcfce7 !important;
+          }
+          .booked-date {
+            background-color: #fef2f2 !important; /* light red */
+            color: #991b1b !important;
+            text-decoration: line-through !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+          }
+          .booked-date:hover {
+            background-color: #fee2e2 !important;
+          }
+          
           .react-datepicker__day--selected {
             background-color: #3b82f6 !important;
             color: white !important;
+            text-decoration: none !important;
           }
-          .react-datepicker__day--in-range {
-            background-color: #dbeafe !important;
-            color: #1e40af !important;
-          }
-          .react-datepicker__day--keyboard-selected {
-            background-color: #3b82f6 !important;
-            color: white !important;
-          }
-          .react-datepicker__day--outside-month {
-            color: #9ca3af !important;
-          }
-          .react-datepicker__navigation {
-            color: #6b7280 !important;
-          }
-          .react-datepicker__navigation:hover {
-            color: #374151 !important;
+          .react-datepicker__day--disabled {
+             color: #9ca3af !important;
+             background-color: #f3f4f6 !important;
+             text-decoration: line-through !important;
           }
         `}
       </style>
@@ -149,6 +188,7 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
               <CreditCard className="h-5 w-5 text-blue-600" />
               <span>Booking Summary</span>
             </div>
+            {isAvailabilityLoading && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
             <Badge variant="outline" className="text-sm">
               ₹{pricePerNight}/night
             </Badge>
@@ -197,6 +237,17 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
                     minDate={minDate}
                     maxDate={maxDate}
                     placeholderText="Check-in Date"
+                    dayClassName={getDayClass}
+                    excludeDates={bookedRanges?.flatMap(range => {
+                      const dates = [];
+                      let current = new Date(range.checkIn);
+                      const end = new Date(range.checkOut);
+                      while (current < end) {
+                        dates.push(new Date(current));
+                        current.setDate(current.getDate() + 1);
+                      }
+                      return dates;
+                    })}
                     className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     wrapperClassName="w-full"
                   />
@@ -213,6 +264,17 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
                     minDate={minDate}
                     maxDate={maxDate}
                     placeholderText="Check-out Date"
+                    dayClassName={getDayClass}
+                    excludeDates={bookedRanges?.flatMap(range => {
+                      const dates = [];
+                      let current = new Date(range.checkIn);
+                      const end = new Date(range.checkOut);
+                      while (current < end) {
+                        dates.push(new Date(current));
+                        current.setDate(current.getDate() + 1);
+                      }
+                      return dates;
+                    })}
                     className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     wrapperClassName="w-full"
                   />
@@ -265,6 +327,7 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
                     max={20}
                     className="text-center font-semibold"
                     {...register("childCount", {
+                      required: "This field is required",
                       valueAsNumber: true,
                     })}
                   />
@@ -275,6 +338,7 @@ const GuestInfoForm = ({ hotelId, pricePerNight }: Props) => {
             {/* Action Button */}
             <Button
               type="submit"
+              disabled={isAvailabilityLoading}
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               {isLoggedIn ? (

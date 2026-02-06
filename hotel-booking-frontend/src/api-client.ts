@@ -222,6 +222,13 @@ export const fetchHotelById = async (hotelId: string): Promise<HotelType> => {
   return response.data;
 };
 
+export const fetchHotelAvailability = async (
+  hotelId: string
+): Promise<{ checkIn: string; checkOut: string }[]> => {
+  const response = await axiosInstance.get(`/api/hotels/${hotelId}/availability`);
+  return response.data;
+};
+
 export const createRoomBooking = async (
   hotelId: string,
   formData: any
@@ -294,6 +301,13 @@ export const verifyBookingId = async (
   const response = await axiosInstance.patch(`/api/bookings/${bookingId}/verify-id`, {
     action,
     rejectionReason,
+  });
+  return response.data;
+};
+
+export const cancelBooking = async (bookingId: string, reason?: string) => {
+  const response = await axiosInstance.post(`/api/my-bookings/${bookingId}/cancel`, {
+    reason,
   });
   return response.data;
 };

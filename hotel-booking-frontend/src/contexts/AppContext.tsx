@@ -6,7 +6,7 @@ import { loadStripe, Stripe } from "@stripe/stripe-js";
 import { useToast } from "../hooks/use-toast";
 import { UserType } from "../../../shared/types";
 
-const STRIPE_PUB_KEY = import.meta.env.VITE_STRIPE_PUB_KEY || "";
+const STRIPE_PUB_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || "";
 
 type ToastMessage = {
   title: string;
@@ -147,8 +147,8 @@ export const AppContextProvider = ({
       toastMessage.type === "SUCCESS"
         ? "success"
         : toastMessage.type === "ERROR"
-        ? "destructive"
-        : "info";
+          ? "destructive"
+          : "info";
 
     toast({
       variant,

@@ -1,17 +1,14 @@
-import { useQueryWithLoading } from "../hooks/useLoadingHooks";
+import { useQueryWithLoading, useMutationWithLoading } from "../hooks/useLoadingHooks";
 import * as apiClient from "../api-client";
 import type { BookingType, HotelWithBookingsType } from "../../../shared/types";
 import { Badge } from "../components/ui/badge";
 import {
   Calendar,
   Users,
-  CreditCard,
   Clock,
   MapPin,
-  Phone,
   Building,
   Star,
-  Package,
   DollarSign,
   AlertCircle,
   CheckCircle2,
@@ -30,8 +27,10 @@ import ChatModal from "../components/ChatModal";
 import ReportModal from "../components/ReportModal";
 import { useState, useMemo } from "react";
 import { Button } from "../components/ui/button";
+import useAppContext from "../hooks/useAppContext";
 
 const MyBookings = () => {
+  const { showToast } = useAppContext();
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isIdModalOpen, setIsIdModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
@@ -57,13 +56,46 @@ const MyBookings = () => {
   } | null>(null);
   const [chatBookingData, setChatBookingData] = useState<{ id: string, hotelName: string, ownerName: string } | null>(null);
 
-  const { data: hotels, isLoading, refetch } = useQueryWithLoading<HotelWithBookingsType[]>(
+  const { data: hotels, refetch } = useQueryWithLoading<HotelWithBookingsType[]>(
     "fetchMyBookings",
     apiClient.fetchMyBookings,
     {
       loadingMessage: "Loading your bookings...",
     }
   );
+
+  const cancelMutation = useMutationWithLoading(
+    (data: { id: string; reason?: string }) =>
+      apiClient.cancelBooking(data.id, data.reason),
+    {
+      onSuccess: () => {
+        showToast({
+          title: "Booking Cancelled",
+          description: "Your reservation has been cancelled successfully.",
+          type: "SUCCESS",
+        });
+        refetch();
+      },
+      onError: (error: Error) => {
+        showToast({
+          title: "Cancellation Failed",
+          description: error.message,
+          type: "ERROR",
+        });
+      },
+      loadingMessage: "Processing cancellation...",
+    }
+  );
+
+  const handleCancelBooking = (bookingId: string) => {
+    if (
+      window.confirm(
+        "Are you sure you want to cancel this booking? This action cannot be undone."
+      )
+    ) {
+      cancelMutation.mutate({ id: bookingId });
+    }
+  };
 
   // Process and sort all bookings
   const { upcomingBookings, pastBookings, stats } = useMemo(() => {
@@ -303,6 +335,18 @@ const MyBookings = () => {
                 >
                   View Hotel
                 </Button>
+
+                {/* Cancel Booking Button - Only for active/future bookings */}
+                {!isPast && !["CANCELLED", "REJECTED", "COMPLETED", "REFUNDED"].includes(booking.status) && (
+                  <Button
+                    variant="outline"
+                    className="flex-1 md:flex-none border-red-200 text-red-600 hover:bg-red-50 rounded-xl px-6 py-5 font-bold"
+                    onClick={() => handleCancelBooking(booking._id)}
+                  >
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    Cancel Booking
+                  </Button>
+                )}
 
                 {/* Report Button - Always available */}
                 <Button
