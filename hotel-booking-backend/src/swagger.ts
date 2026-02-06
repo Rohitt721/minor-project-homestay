@@ -10,7 +10,7 @@ const options = {
         "A comprehensive API for hotel booking and management system",
       contact: {
         name: "API Support",
-        email: "support@mernholidays.com",
+        email: "support@homestay.com",
       },
     },
     servers: [

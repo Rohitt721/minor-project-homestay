@@ -59,6 +59,49 @@ export const signIn = async (formData: SignInFormData) => {
   return response.data;
 };
 
+export const googleSignIn = async (idToken: string) => {
+  console.log("🔵 Sending Google ID token to backend...");
+  try {
+    const response = await axiosInstance.post("/api/auth/google-login", {
+      idToken,
+    });
+
+    // Store JWT token from response body in localStorage
+    const token = response.data?.token;
+    if (token) {
+      localStorage.setItem("session_id", token);
+      console.log("✅ Google JWT token stored in localStorage");
+    }
+
+    // Store user info for incognito mode fallback
+    if (response.data?.userId) {
+      localStorage.setItem("user_id", response.data.userId);
+    }
+
+    // Force validate token after successful login to update React Query cache
+    try {
+      console.log("🔵 Validating fresh Google session...");
+      await validateToken();
+      queryClient.invalidateQueries("validateToken");
+      await queryClient.refetchQueries("validateToken");
+      console.log("✅ Token validation successful after Google login");
+    } catch (error) {
+      console.warn(
+        "⚠️ Token validation failed after Google login, but session is likely active:",
+        error
+      );
+    }
+
+    return response.data;
+  } catch (error: any) {
+    console.error(
+      "❌ Google SignIn API Call Failed:",
+      error.response?.data || error.message
+    );
+    throw new Error(error.response?.data?.message || "Google login failed");
+  }
+};
+
 export const validateToken = async () => {
   try {
     const response = await axiosInstance.get("/api/auth/validate-token");

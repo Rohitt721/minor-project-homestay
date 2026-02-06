@@ -56,9 +56,14 @@ axiosInstance.interceptors.response.use(
 
     // Handle 401 errors by clearing session
     if (error.response?.status === 401) {
-      Cookies.remove("session_id");
-      localStorage.removeItem("session_id");
-      // Don't redirect automatically - let components handle it
+      console.warn("🔴 401 Unauthorized detected by interceptor");
+      // Only clear if we actually have a session to clear
+      if (localStorage.getItem("session_id")) {
+        console.log("🔴 Clearing invalid session from localStorage");
+        Cookies.remove("session_id");
+        localStorage.removeItem("session_id");
+        localStorage.removeItem("user_id");
+      }
     }
 
     // Handle rate limiting (429) with retry logic

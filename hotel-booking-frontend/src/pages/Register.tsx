@@ -28,6 +28,7 @@ import {
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
+import GoogleAuth from "../components/GoogleAuth";
 
 export type RegisterFormData = {
   firstName: string;
@@ -55,19 +56,19 @@ const Register = () => {
 
   const mutation = useMutationWithLoading(apiClient.register, {
     onSuccess: async () => {
-      showToast({ 
-        title: "Registration Successful", 
-        description: "Your account has been created successfully! Welcome to MernHolidays.",
-        type: "SUCCESS" 
+      showToast({
+        title: "Registration Successful",
+        description: "Your account has been created successfully! Welcome to HomeStay.",
+        type: "SUCCESS"
       });
       await queryClient.invalidateQueries("validateToken");
       navigate("/");
     },
     onError: (error: Error) => {
-      showToast({ 
-        title: "Registration Failed", 
+      showToast({
+        title: "Registration Failed",
         description: error.message,
-        type: "ERROR" 
+        type: "ERROR"
       });
     },
     loadingMessage: "Creating your account...",
@@ -98,7 +99,7 @@ const Register = () => {
               <UserPlus className="w-8 h-8 text-white" />
             </div>
             <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
-              Join MernHolidays
+              Join HomeStay
             </CardTitle>
             <CardDescription className="text-gray-600">
               Create your account to start booking
@@ -399,6 +400,11 @@ const Register = () => {
                 <div className="relative flex justify-center text-sm">
                   <span className="px-2 bg-white text-gray-500">or</span>
                 </div>
+              </div>
+
+              {/* Google Social Login */}
+              <div className="space-y-4">
+                <GoogleAuth />
               </div>
 
               {/* Sign In Link */}

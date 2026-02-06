@@ -18,6 +18,7 @@ import {
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { Badge } from "../components/ui/badge";
+import GoogleAuth from "../components/GoogleAuth";
 
 export type SignInFormData = {
   email: string;
@@ -214,6 +215,11 @@ const SignIn = () => {
                 <div className="relative flex justify-center text-sm">
                   <span className="px-2 bg-white text-gray-500">or</span>
                 </div>
+              </div>
+
+              {/* Google Social Login */}
+              <div className="space-y-4">
+                <GoogleAuth />
               </div>
 
               {/* Registration Link */}

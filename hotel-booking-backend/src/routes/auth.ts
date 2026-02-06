@@ -4,6 +4,9 @@ import User from "../models/user";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import verifyToken from "../middleware/auth";
+import { OAuth2Client } from "google-auth-library";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const router = express.Router();
 
@@ -151,6 +154,115 @@ router.post("/logout", (req: Request, res: Response) => {
     path: "/",
   });
   res.send();
+});
+
+/**
+ * @swagger
+ * /api/auth/google-login:
+ *   post:
+ *     summary: Google OAuth login
+ *     description: Authenticate user using Google ID token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Google ID token
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       400:
+ *         description: Invalid Google token
+ *       500:
+ *         description: Server error
+ */
+router.post("/google-login", async (req: Request, res: Response) => {
+  const { idToken } = req.body;
+  console.log("🔵 Google Login Request received");
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      console.error("❌ Google Login Error: Invalid payload from Google");
+      return res.status(400).json({ message: "Invalid Google token" });
+    }
+
+    const { email, given_name, family_name, name, picture } = payload;
+    console.log(`🔵 Google login attempt for email: ${email}`);
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      console.log(`🟡 User not found for ${email}. Creating new user.`);
+      // If given_name/family_name are missing, try to split the full 'name'
+      let firstName = given_name;
+      let lastName = family_name;
+
+      if (!firstName && name) {
+        const nameParts = name.split(" ");
+        firstName = nameParts[0];
+        lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "User";
+      }
+
+      user = new User({
+        email,
+        firstName: firstName || "Google",
+        lastName: lastName || "User",
+        emailVerified: true,
+      });
+
+      try {
+        await user.save();
+        console.log(`✅ New user created successfully: ${user._id}`);
+      } catch (saveError) {
+        console.error("❌ Error saving new Google user:", saveError);
+        throw saveError;
+      }
+    } else {
+      console.log(`✅ Existing user found: ${user._id}`);
+    }
+
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET_KEY as string,
+      {
+        expiresIn: "1d",
+      }
+    );
+
+    console.log("✅ JWT generated for Google user");
+
+    res.status(200).json({
+      userId: user._id,
+      message: "Login successful",
+      token: token,
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Google Login Final Failure:", error);
+    res.status(500).json({
+      message: "Google login failed",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
 });
 
 export default router;
