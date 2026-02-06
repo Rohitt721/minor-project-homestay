@@ -18,6 +18,7 @@ const bookingSchema = new mongoose.Schema(
     childCount: { type: Number, required: true },
     checkIn: { type: Date, required: true, index: true },
     checkOut: { type: Date, required: true },
+    bookingType: { type: String, enum: ["nightly", "hourly"], default: "nightly", required: true },
     totalCost: { type: Number, required: true },
     status: {
       type: String,

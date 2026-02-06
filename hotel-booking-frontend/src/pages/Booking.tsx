@@ -2,7 +2,7 @@ import { useQuery } from "react-query";
 import * as apiClient from "../api-client";
 import BookingForm from "../forms/BookingForm/BookingForm";
 import useSearchContext from "../hooks/useSearchContext";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import BookingDetailsSummary from "../components/BookingDetailsSummary";
 import {
@@ -17,18 +17,21 @@ import { Loader2, CreditCard, Calendar, Users, AlertTriangle } from "lucide-reac
 const Booking = () => {
   const search = useSearchContext();
   const { hotelId } = useParams();
+  const location = useLocation();
+  const bookingType = (location.state as any)?.bookingType || "nightly";
 
   const [numberOfNights, setNumberOfNights] = useState<number>(0);
 
   useEffect(() => {
     if (search.checkIn && search.checkOut) {
-      const nights =
-        Math.abs(search.checkOut.getTime() - search.checkIn.getTime()) /
-        (1000 * 60 * 60 * 24);
-
-      setNumberOfNights(Math.ceil(nights));
+      const diff = Math.abs(search.checkOut.getTime() - search.checkIn.getTime());
+      if (bookingType === "nightly") {
+        setNumberOfNights(Math.ceil(diff / (1000 * 60 * 60 * 24)));
+      } else {
+        setNumberOfNights(Math.ceil(diff / (1000 * 60 * 60)));
+      }
     }
-  }, [search.checkIn, search.checkOut]);
+  }, [search.checkIn, search.checkOut, bookingType]);
 
 
   const { data: hotel, isLoading: isLoadingHotel } = useQuery(
@@ -108,6 +111,7 @@ const Booking = () => {
                   childCount={search.childCount}
                   numberOfNights={numberOfNights}
                   hotel={hotel}
+                  bookingType={bookingType}
                 />
               </CardContent>
             </Card>

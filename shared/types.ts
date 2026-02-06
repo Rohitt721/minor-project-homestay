@@ -54,7 +54,7 @@ export type HotelType = {
   childCount: number;
   facilities: string[];
   pricePerNight: number;
-  pricePerHour?: number;
+  pricePerHour: number;
   starRating: number;
   imageUrls: string[];
   lastUpdated: Date;
@@ -146,6 +146,7 @@ export type BookingType = {
   childCount: number;
   checkIn: Date;
   checkOut: Date;
+  bookingType: "nightly" | "hourly";
   totalCost: number;
   status: BookingStatus;
   paymentStatus: "pending" | "paid" | "failed" | "refunded";

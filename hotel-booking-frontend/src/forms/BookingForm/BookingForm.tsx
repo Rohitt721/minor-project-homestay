@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { UserType, HotelType } from "../../../../shared/types";
 import useSearchContext from "../../hooks/useSearchContext";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import * as apiClient from "../../api-client";
 import useAppContext from "../../hooks/useAppContext";
 import { Button } from "../../components/ui/button";
@@ -20,6 +20,7 @@ import {
   Smartphone,
   Landmark,
   QrCode,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -40,6 +41,7 @@ export type BookingFormData = {
   checkOut: string;
   hotelId: string;
   totalCost: number;
+  bookingType: "nightly" | "hourly";
   specialRequests?: string;
   cardNumber: string;
   expiryDate: string;
@@ -51,19 +53,23 @@ const BookingForm = ({ currentUser, hotel, numberOfNights }: Props) => {
   const search = useSearchContext();
   const { hotelId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useAppContext();
+
+  const bookingType = (location.state as any)?.bookingType || "nightly";
 
   const [phone, setPhone] = useState<string>("");
   const [specialRequests, setSpecialRequests] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "upi" | "netbanking">("card");
 
-  const totalCost = hotel.pricePerNight * numberOfNights;
+  const totalCost = bookingType === 'nightly'
+    ? hotel.pricePerNight * numberOfNights
+    : (hotel.pricePerHour || 0) * numberOfNights;
 
   const {
     handleSubmit,
     register,
-    formState: { errors },
   } = useForm<BookingFormData>({
     defaultValues: {
       firstName: currentUser.firstName,
@@ -75,6 +81,7 @@ const BookingForm = ({ currentUser, hotel, numberOfNights }: Props) => {
       checkOut: search.checkOut.toISOString(),
       hotelId: hotelId,
       totalCost: totalCost,
+      bookingType: bookingType,
     },
   });
 
@@ -89,14 +96,15 @@ const BookingForm = ({ currentUser, hotel, numberOfNights }: Props) => {
         ...formData,
         phone,
         specialRequests,
-        paymentIntentId: "dummy_payment_" + Date.now(), // Send a dummy ID to the backend
+        bookingType, // Ensure this is sent
+        paymentIntentId: "dummy_payment_" + Date.now(),
       };
 
       await apiClient.createRoomBooking(hotelId as string, completeFormData);
 
       showToast({
         title: "Booking Successful",
-        description: "Your hotel booking has been confirmed successfully!",
+        description: `Your ${bookingType} booking has been confirmed successfully!`,
         type: "SUCCESS",
       });
 
@@ -359,11 +367,14 @@ const BookingForm = ({ currentUser, hotel, numberOfNights }: Props) => {
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-xl text-white shadow-md">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-blue-100 text-sm">Total Amount to Pay</p>
+                <p className="text-blue-100 text-sm flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  Total Amount to Pay
+                </p>
                 <h4 className="text-3xl font-bold">₹{totalCost.toFixed(2)}</h4>
               </div>
               <div className="text-right">
-                <p className="text-blue-100 text-sm">{numberOfNights} Nights</p>
+                <p className="text-blue-100 text-sm">{numberOfNights} {bookingType === 'nightly' ? 'Nights' : 'Hours'}</p>
                 <p className="text-xs text-blue-200">Instant confirmation</p>
               </div>
             </div>

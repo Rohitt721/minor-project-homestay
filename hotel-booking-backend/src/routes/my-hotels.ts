@@ -42,7 +42,11 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const imageFiles = (req as any).files as any[];
-      const newHotel: HotelType = req.body;
+      const newHotel: HotelType = {
+        ...req.body,
+        pricePerNight: Number(req.body.pricePerNight),
+        pricePerHour: Number(req.body.pricePerHour),
+      };
 
       // Ensure type is always an array
       if (typeof newHotel.type === "string") {
@@ -191,6 +195,7 @@ router.put(
         description: req.body.description,
         type: Array.isArray(req.body.type) ? req.body.type : [req.body.type],
         pricePerNight: Number(req.body.pricePerNight),
+        pricePerHour: Number(req.body.pricePerHour),
         starRating: Number(req.body.starRating),
         adultCount: Number(req.body.adultCount),
         childCount: Number(req.body.childCount),

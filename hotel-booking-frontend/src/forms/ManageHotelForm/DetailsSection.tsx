@@ -70,13 +70,16 @@ const DetailsSection = () => {
         )}
       </label>
       <label className="text-gray-700 text-sm font-bold max-w-[50%]">
-        Price Per Hour (optional)
+        Price Per Hour
         <input
           type="number"
           min={0}
           className="border rounded w-full py-1 px-2 font-normal"
-          {...register("pricePerHour")}
+          {...register("pricePerHour", { required: "This field is required" })}
         ></input>
+        {errors.pricePerHour && (
+          <span className="text-red-500">{errors.pricePerHour.message}</span>
+        )}
       </label>
       <label className="text-gray-700 text-sm font-bold max-w-[50%]">
         Star Rating

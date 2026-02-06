@@ -81,26 +81,26 @@ const Detail = () => {
         {((hotel.totalBookings && hotel.totalBookings > 0) ||
           (hotel.totalRevenue && hotel.totalRevenue > 0) ||
           hotel.isFeatured) && (
-          <div className="flex gap-4 mt-4">
-            {hotel.totalBookings && hotel.totalBookings > 0 && (
-              <Badge variant="outline">{hotel.totalBookings} bookings</Badge>
-            )}
-            {hotel.totalRevenue && hotel.totalRevenue > 0 && (
-              <Badge variant="outline">
-                ₹{hotel.totalRevenue.toLocaleString()} revenue
+            <div className="flex gap-4 mt-4">
+              {hotel.totalBookings && hotel.totalBookings > 0 && (
+                <Badge variant="outline">{hotel.totalBookings} bookings</Badge>
+              )}
+              {hotel.totalRevenue && hotel.totalRevenue > 0 && (
+                <Badge variant="outline">
+                  ₹{hotel.totalRevenue.toLocaleString()} revenue
+                </Badge>
+              )}
+              {/* Rating Badge - Always show with appropriate message */}
+              <Badge variant="outline" className="text-gray-600">
+                {hotel.averageRating && hotel.averageRating > 0
+                  ? `${hotel.averageRating.toFixed(1)} avg rating`
+                  : "Rating feature not yet implemented"}
               </Badge>
-            )}
-            {/* Rating Badge - Always show with appropriate message */}
-            <Badge variant="outline" className="text-gray-600">
-              {hotel.averageRating && hotel.averageRating > 0
-                ? `${hotel.averageRating.toFixed(1)} avg rating`
-                : "Rating feature not yet implemented"}
-            </Badge>
-            {hotel.isFeatured && (
-              <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge>
-            )}
-          </div>
-        )}
+              {hotel.isFeatured && (
+                <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge>
+              )}
+            </div>
+          )}
 
         {/* Hotel Types */}
         {hotel.type && hotel.type.length > 0 && (
@@ -299,6 +299,7 @@ const Detail = () => {
         <div className="h-fit">
           <GuestInfoForm
             pricePerNight={hotel.pricePerNight}
+            pricePerHour={hotel.pricePerHour || 0}
             hotelId={hotel._id}
           />
         </div>

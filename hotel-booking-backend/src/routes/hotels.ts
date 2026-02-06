@@ -102,12 +102,13 @@ router.get(
       const bookings = await Booking.find({
         hotelId,
         status: { $nin: ["CANCELLED", "REJECTED", "REFUNDED"] },
-      }).select("checkIn checkOut");
+      }).select("checkIn checkOut bookingType");
 
-      // Transform into a simple array of date ranges
+      // Transform into a simple array of date/time ranges
       const bookedDates = bookings.map((booking) => ({
         checkIn: booking.checkIn,
         checkOut: booking.checkOut,
+        bookingType: booking.bookingType,
       }));
 
       res.status(200).json(bookedDates);
@@ -127,9 +128,33 @@ router.post(
       // In dummy mode, we don't verify with external providers
       console.log("📝 Processing dummy booking for hotel:", req.params.hotelId);
 
-      const { checkIn, checkOut, totalCost } = req.body;
+      const { checkIn, checkOut, bookingType } = req.body;
+      const hotel = await Hotel.findById(req.params.hotelId);
 
-      // 1. Double-booking prevention: Check if dates are already booked
+      if (!hotel) {
+        return res.status(404).json({ message: "Hotel not found" });
+      }
+
+      // 0. Support check for hourly bookings
+      if (bookingType === "hourly") {
+        if (!hotel.pricePerHour || hotel.pricePerHour <= 0) {
+          return res.status(400).json({
+            message: "Hourly bookings are not supported for this hotel."
+          });
+        }
+
+        const start = new Date(checkIn);
+        const end = new Date(checkOut);
+        const durationInMs = end.getTime() - start.getTime();
+        if (durationInMs < 1000 * 60 * 60) {
+          return res.status(400).json({
+            message: "The minimum booking duration is 1 hour.",
+          });
+        }
+      }
+
+      // 1. Double-booking prevention: Check for overlapping bookings
+      // Logic: (StartA < EndB) && (EndA > StartB)
       const existingBooking = await Booking.findOne({
         hotelId: req.params.hotelId,
         status: { $nin: ["CANCELLED", "REJECTED", "REFUNDED"] },
@@ -143,7 +168,7 @@ router.post(
 
       if (existingBooking) {
         return res.status(400).json({
-          message: "These dates are no longer available. Please select different dates.",
+          message: "The selected time slot is already booked. Please choose a different time or date.",
         });
       }
 

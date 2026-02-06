@@ -16,7 +16,7 @@ export type HotelFormData = {
   description: string;
   type: string[];
   pricePerNight: number;
-  pricePerHour?: number;
+  pricePerHour: number;
   starRating: number;
   facilities: string[];
   imageFiles?: FileList;
@@ -67,7 +67,7 @@ const ManageHotelForm = ({ onSave, isLoading, hotel }: Props) => {
       // Ensure contact and policies are properly initialized
       const formData = {
         ...hotel,
-        pricePerHour: hotel.pricePerHour || undefined,
+        pricePerHour: hotel.pricePerHour || 0,
         contact: hotel.contact || {
           phone: "",
           email: "",
@@ -96,10 +96,13 @@ const ManageHotelForm = ({ onSave, isLoading, hotel }: Props) => {
     formData.append("city", formDataJson.city);
     formData.append("country", formDataJson.country);
     formData.append("description", formDataJson.description);
+
     formDataJson.type.forEach((t, idx) => {
       formData.append(`type[${idx}]`, t);
     });
+
     formData.append("pricePerNight", formDataJson.pricePerNight.toString());
+    formData.append("pricePerHour", formDataJson.pricePerHour.toString());
     formData.append("starRating", formDataJson.starRating.toString());
     formData.append("adultCount", formDataJson.adultCount.toString());
     formData.append("childCount", formDataJson.childCount.toString());
