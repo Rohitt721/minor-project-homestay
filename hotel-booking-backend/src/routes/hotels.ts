@@ -172,13 +172,31 @@ router.post(
         });
       }
 
+      // 2. Identity Verification Check
+      const user = await User.findById(req.userId);
+      if (!user || user.verification?.status !== "VERIFIED") {
+        return res.status(403).json({
+          message: "Account verification required. Please verify your identity before booking.",
+        });
+      }
+
       const newBooking: BookingType = {
         ...req.body,
         userId: req.userId,
         hotelId: req.params.hotelId,
         createdAt: new Date(),
-        status: "ID_PENDING",
+        status: "CONFIRMED", // Verified users get automatic confirmation (unless logic dictates otherwise)
         paymentStatus: "paid",
+        idProof: {
+          idType: (["Aadhaar", "Passport", "Driving License", "Voter ID"].includes(user.verification.documents[0]?.documentType || "")
+            ? user.verification.documents[0]?.documentType as any
+            : "Aadhaar"),
+          frontImage: user.verification.documents[0]?.url || "",
+          backImage: user.verification.documents[1]?.url || "",
+          status: "VERIFIED",
+          uploadedAt: user.verification.documents[0]?.uploadedAt || new Date(),
+          verifiedAt: new Date(),
+        },
       };
 
       // Create booking in separate collection

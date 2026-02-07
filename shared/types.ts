@@ -26,6 +26,12 @@ export type UserType = {
   lastLogin?: Date;
   isActive?: boolean;
   emailVerified?: boolean;
+  profileImage?: string;
+  businessInfo?: {
+    companyName: string;
+    taxId?: string;
+    businessAddress?: string;
+  };
   createdAt?: Date;
   updatedAt?: Date;
   verification?: {
@@ -63,8 +69,8 @@ export type HotelType = {
   // bookings: BookingType[];
   // ... rest remains mostly similar but I'll update the whole block for safety
   location?: {
-    latitude: number;
-    longitude: number;
+    type: "Point";
+    coordinates: number[]; // [longitude, latitude]
     address: {
       street: string;
       city: string;

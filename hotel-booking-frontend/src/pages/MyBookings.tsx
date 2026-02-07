@@ -1,7 +1,5 @@
-import { useQueryWithLoading, useMutationWithLoading } from "../hooks/useLoadingHooks";
 import * as apiClient from "../api-client";
 import type { BookingType, HotelWithBookingsType } from "../../../shared/types";
-import { Badge } from "../components/ui/badge";
 import {
   Calendar,
   Users,
@@ -12,27 +10,29 @@ import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
-  FileUp,
-  History,
+  History as HistoryIcon,
   PlaneTakeoff,
   LayoutDashboard,
   Gem,
   ArrowRight,
   MessageSquare,
   AlertTriangle,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
-import IdUploadModal from "../components/IdUploadModal";
 import ReviewModal from "../components/ReviewModal";
 import ChatModal from "../components/ChatModal";
 import ReportModal from "../components/ReportModal";
 import { useState, useMemo } from "react";
 import { Button } from "../components/ui/button";
 import useAppContext from "../hooks/useAppContext";
+import { useNavigate } from "react-router-dom";
+import { Badge } from "../components/ui/badge";
+import { useQuery } from "react-query";
 
 const MyBookings = () => {
   const { showToast } = useAppContext();
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-  const [isIdModalOpen, setIsIdModalOpen] = useState(false);
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
 
   // Review modal state
@@ -45,6 +45,11 @@ const MyBookings = () => {
 
   // Chat Modal State
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [chatBookingData, setChatBookingData] = useState<{
+    id: string;
+    hotelName: string;
+    ownerName: string;
+  } | null>(null);
 
   // Report Modal State
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -54,46 +59,21 @@ const MyBookings = () => {
     hotelId: string;
     ownerId: string;
   } | null>(null);
-  const [chatBookingData, setChatBookingData] = useState<{ id: string, hotelName: string, ownerName: string } | null>(null);
 
-  const { data: hotels, refetch } = useQueryWithLoading<HotelWithBookingsType[]>(
+  const { data: hotels, isLoading, refetch } = useQuery(
     "fetchMyBookings",
-    apiClient.fetchMyBookings,
-    {
-      loadingMessage: "Loading your bookings...",
-    }
+    apiClient.fetchMyBookings
   );
 
-  const cancelMutation = useMutationWithLoading(
-    (data: { id: string; reason?: string }) =>
-      apiClient.cancelBooking(data.id, data.reason),
-    {
-      onSuccess: () => {
-        showToast({
-          title: "Booking Cancelled",
-          description: "Your reservation has been cancelled successfully.",
-          type: "SUCCESS",
-        });
+  const handleCancelBooking = async (bookingId: string) => {
+    if (window.confirm("Are you sure you want to cancel this booking?")) {
+      try {
+        await apiClient.cancelBooking(bookingId);
+        showToast({ title: "Booking Cancelled", description: "Your booking has been successfully cancelled.", type: "SUCCESS" });
         refetch();
-      },
-      onError: (error: Error) => {
-        showToast({
-          title: "Cancellation Failed",
-          description: error.message,
-          type: "ERROR",
-        });
-      },
-      loadingMessage: "Processing cancellation...",
-    }
-  );
-
-  const handleCancelBooking = (bookingId: string) => {
-    if (
-      window.confirm(
-        "Are you sure you want to cancel this booking? This action cannot be undone."
-      )
-    ) {
-      cancelMutation.mutate({ id: bookingId });
+      } catch (error: any) {
+        showToast({ title: "Cancellation Failed", description: error.message || "An error occurred", type: "ERROR" });
+      }
     }
   };
 
@@ -139,6 +119,14 @@ const MyBookings = () => {
     };
   }, [hotels]);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
   if (!hotels || hotels.length === 0) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
@@ -152,7 +140,7 @@ const MyBookings = () => {
           </p>
           <Button
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6 rounded-2xl font-bold transition-all hover:scale-105"
-            onClick={() => window.location.href = "/"}
+            onClick={() => navigate("/")}
           >
             Explore Hotels
             <ArrowRight className="w-5 h-5 ml-2" />
@@ -165,8 +153,6 @@ const MyBookings = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "CONFIRMED": return "from-green-500/10 to-emerald-500/10 text-emerald-700 border-emerald-200/50";
-      case "ID_PENDING": return "from-amber-500/10 to-orange-500/10 text-orange-700 border-orange-200/50";
-      case "ID_SUBMITTED": return "from-blue-500/10 to-cyan-500/10 text-blue-700 border-blue-200/50";
       case "CANCELLED":
       case "REJECTED": return "from-rose-500/10 to-red-500/10 text-rose-700 border-rose-200/50";
       case "COMPLETED": return "from-indigo-500/10 to-violet-500/10 text-indigo-700 border-indigo-200/50";
@@ -177,8 +163,6 @@ const MyBookings = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "CONFIRMED": return <CheckCircle2 className="w-4 h-4" />;
-      case "ID_PENDING": return <Clock className="w-4 h-4" />;
-      case "ID_SUBMITTED": return <Clock className="w-4 h-4" />;
       case "COMPLETED": return <Gem className="w-4 h-4" />;
       case "CANCELLED":
       case "REJECTED": return <AlertCircle className="w-4 h-4" />;
@@ -268,31 +252,24 @@ const MyBookings = () => {
             </div>
 
             <div className="mt-auto flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="flex -space-x-2">
-                  {[...Array(booking.adultCount)].map((_, i) => (
-                    <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs ring-2 ring-transparent group-hover:ring-indigo-50 transition-all">
-                      {booking.firstName[0]}
-                    </div>
-                  ))}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="flex -space-x-2">
+                    {[...Array(Math.min(3, booking.adultCount))].map((_, i) => (
+                      <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                        {booking.firstName[0]}
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-gray-500 font-medium">{booking.firstName} {booking.lastName}</span>
                 </div>
-                <span className="text-gray-500 font-medium">Recorded for {booking.firstName} {booking.lastName}</span>
+                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5 bg-emerald-50 px-2 py-1 rounded-lg w-fit">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Verified Identity Linked
+                </span>
               </div>
 
-              <div className="flex gap-3 w-full md:w-auto">
-                {booking.status === "ID_PENDING" && (
-                  <Button
-                    onClick={() => {
-                      setSelectedBookingId(booking._id);
-                      setIsIdModalOpen(true);
-                    }}
-                    className="flex-1 md:flex-none bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-5 rounded-xl shadow-lg shadow-amber-200 transition-all hover:scale-[1.02]"
-                  >
-                    <FileUp className="w-4 h-4 mr-2" />
-                    Upload ID
-                  </Button>
-                )}
-
+              <div className="flex flex-wrap gap-2 w-full md:w-auto justify-end">
                 {isPast && booking.status === "COMPLETED" && (
                   <Button
                     onClick={() => {
@@ -303,20 +280,21 @@ const MyBookings = () => {
                       });
                       setIsReviewModalOpen(true);
                     }}
-                    className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-5 rounded-xl shadow-lg shadow-indigo-200 transition-all hover:scale-[1.02]"
+                    className="flex-1 md:flex-none border-indigo-200 text-indigo-700 hover:bg-indigo-50 rounded-xl px-6 py-5 font-bold flex items-center gap-2"
+                    variant="outline"
                   >
-                    <Star className="w-4 h-4 mr-2" />
-                    Rate Experience
+                    <Star className="w-4 h-4" />
+                    Rate Stay
                   </Button>
                 )}
 
-                {(booking.status === "CONFIRMED" || booking.status === "ID_SUBMITTED") && (
+                {!isPast && ["CONFIRMED", "PAYMENT_DONE"].includes(booking.status) && (
                   <Button
                     onClick={() => {
                       setChatBookingData({
                         id: booking._id,
                         hotelName: hotel.name,
-                        ownerName: "Hotel Host" // We could fetch actual owner name, but for now this works
+                        ownerName: "Hotel Host"
                       });
                       setIsChatModalOpen(true);
                     }}
@@ -324,19 +302,10 @@ const MyBookings = () => {
                     variant="outline"
                   >
                     <MessageSquare className="w-4 h-4" />
-                    Chat with Owner
+                    Chat
                   </Button>
                 )}
 
-                <Button
-                  variant="outline"
-                  className="flex-1 md:flex-none border-gray-200 hover:bg-gray-50 rounded-xl px-6 py-5 font-bold"
-                  onClick={() => window.location.href = `/detail/${hotel._id}`}
-                >
-                  View Hotel
-                </Button>
-
-                {/* Cancel Booking Button - Only for active/future bookings */}
                 {!isPast && !["CANCELLED", "REJECTED", "COMPLETED", "REFUNDED"].includes(booking.status) && (
                   <Button
                     variant="outline"
@@ -344,11 +313,10 @@ const MyBookings = () => {
                     onClick={() => handleCancelBooking(booking._id)}
                   >
                     <AlertCircle className="w-4 h-4 mr-2" />
-                    Cancel Booking
+                    Cancel
                   </Button>
                 )}
 
-                {/* Report Button - Always available */}
                 <Button
                   variant="outline"
                   className="flex-1 md:flex-none border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl px-6 py-5 font-bold"
@@ -364,6 +332,14 @@ const MyBookings = () => {
                 >
                   <AlertTriangle className="w-4 h-4 mr-2" />
                   Report
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="flex-1 md:flex-none border-gray-200 hover:bg-gray-50 rounded-xl px-6 py-5 font-bold"
+                  onClick={() => navigate(`/detail/${hotel._id}`)}
+                >
+                  View Hotel
                 </Button>
               </div>
             </div>
@@ -395,6 +371,23 @@ const MyBookings = () => {
                 <p className="text-indigo-200 text-lg max-w-xl leading-relaxed">
                   Manage your recent trips, track upcoming stays, and share feedback on your favorite destinations.
                 </p>
+                <div className="flex flex-wrap gap-4 mt-8">
+                  <Button
+                    onClick={() => navigate("/trip-planner")}
+                    className="bg-white text-indigo-900 hover:bg-indigo-50 px-8 py-6 rounded-2xl font-black transition-all hover:scale-105 shadow-xl flex items-center gap-3"
+                  >
+                    <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />
+                    AI Trip Planner
+                  </Button>
+                  <Button
+                    onClick={() => navigate("/")}
+                    variant="outline"
+                    className="border-white/20 text-white hover:bg-white/10 px-8 py-6 rounded-2xl font-bold transition-all"
+                  >
+                    Find Hotels
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-4">
@@ -443,7 +436,7 @@ const MyBookings = () => {
                   : "text-gray-500 hover:text-gray-900"
                   }`}
               >
-                <History className="w-4 h-4" />
+                <HistoryIcon className="w-4 h-4" />
                 Travel History
                 <span className={`ml-1 px-2 py-0.5 rounded-full text-[10px] ${activeTab === "past" ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-500"}`}>
                   {pastBookings.length}
@@ -465,9 +458,11 @@ const MyBookings = () => {
                   <BookingCard key={`${booking._id}-${i}`} hotel={hotel} booking={booking} />
                 ))
               ) : (
-                <div className="py-20 text-center bg-gray-50 rounded-[3rem] border border-dashed border-gray-200">
-                  <PlaneTakeoff className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">No upcoming stays found. Ready for a new trip?</p>
+                <div className="text-center py-20 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <PlaneTakeoff className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <p className="text-gray-400 font-bold">No upcoming bookings found.</p>
                 </div>
               )
             ) : (
@@ -476,9 +471,11 @@ const MyBookings = () => {
                   <BookingCard key={`${booking._id}-${i}`} hotel={hotel} booking={booking} />
                 ))
               ) : (
-                <div className="py-20 text-center bg-gray-50 rounded-[3rem] border border-dashed border-gray-200">
-                  <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">No travel history records found.</p>
+                <div className="text-center py-20 bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-200">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <HistoryIcon className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <p className="text-gray-400 font-bold">No travel history available.</p>
                 </div>
               )
             )}
@@ -486,42 +483,35 @@ const MyBookings = () => {
         </div>
       </div>
 
-      <IdUploadModal
-        bookingId={selectedBookingId || ""}
-        isOpen={isIdModalOpen}
-        onClose={() => {
-          setIsIdModalOpen(false);
-          setSelectedBookingId(null);
-          refetch(); // Refresh after upload
-        }}
-      />
+      {isReviewModalOpen && reviewBookingData && (
+        <ReviewModal
+          isOpen={isReviewModalOpen}
+          onClose={() => {
+            setIsReviewModalOpen(false);
+            setReviewBookingData(null);
+            setTimeout(refetch, 500);
+          }}
+          bookingId={reviewBookingData.id}
+          hotelId={reviewBookingData.hotelId}
+          hotelName={reviewBookingData.hotelName}
+        />
+      )}
 
-      <ReviewModal
-        isOpen={isReviewModalOpen}
-        onClose={() => {
-          setIsReviewModalOpen(false);
-          setReviewBookingData(null);
-          // Small delay before refetch to allow DB update
-          setTimeout(refetch, 500);
-        }}
-        bookingId={reviewBookingData?.id || ""}
-        hotelId={reviewBookingData?.hotelId || ""}
-        hotelName={reviewBookingData?.hotelName || ""}
-      />
+      {isChatModalOpen && chatBookingData && (
+        <ChatModal
+          isOpen={isChatModalOpen}
+          onClose={() => {
+            setIsChatModalOpen(false);
+            setChatBookingData(null);
+          }}
+          bookingId={chatBookingData.id}
+          hotelName={chatBookingData.hotelName}
+          receiverName={chatBookingData.ownerName}
+          userRole="user"
+        />
+      )}
 
-      <ChatModal
-        isOpen={isChatModalOpen}
-        onClose={() => {
-          setIsChatModalOpen(false);
-          setChatBookingData(null);
-        }}
-        bookingId={chatBookingData?.id || ""}
-        hotelName={chatBookingData?.hotelName || ""}
-        receiverName={chatBookingData?.ownerName || ""}
-        userRole="user"
-      />
-
-      {reportBookingData && (
+      {isReportModalOpen && reportBookingData && (
         <ReportModal
           isOpen={isReportModalOpen}
           onClose={() => {

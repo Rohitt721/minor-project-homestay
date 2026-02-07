@@ -20,6 +20,8 @@ import rankingRoutes from "./routes/ranking";
 import reviewRoutes from "./routes/reviews";
 import messageRoutes from "./routes/messages";
 import reportRoutes from "./routes/reports";
+import tripPlannerRoutes from "./routes/trip-planner";
+import profileRoutes from "./routes/profile";
 import swaggerUi from "swagger-ui-express";
 import { specs } from "./swagger";
 import helmet from "helmet";
@@ -257,6 +259,8 @@ app.use("/api/rankings", rankingRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/trip-planner", tripPlannerRoutes);
 
 // Swagger API Documentation
 app.use(

@@ -68,6 +68,22 @@ router.post(
         smokingPolicy: req.body["policies.smokingPolicy"] || "",
       };
 
+      // Construct GeoJSON location object
+      newHotel.location = {
+        type: "Point",
+        coordinates: [
+          Number(req.body["location.longitude"] || 0),
+          Number(req.body["location.latitude"] || 0)
+        ],
+        address: {
+          street: req.body["location.address.street"] || "",
+          city: req.body["location.address.city"] || req.body.city || "",
+          state: req.body["location.address.state"] || "",
+          country: req.body["location.address.country"] || req.body.country || "",
+          zipCode: req.body["location.address.zipCode"] || "",
+        }
+      };
+
       const imageUrls = await uploadImages(imageFiles);
 
       newHotel.imageUrls = imageUrls;
@@ -219,6 +235,22 @@ router.put(
         cancellationPolicy: req.body["policies.cancellationPolicy"] || "",
         petPolicy: req.body["policies.petPolicy"] || "",
         smokingPolicy: req.body["policies.smokingPolicy"] || "",
+      };
+
+      // Handle Location Data (GeoJSON) - Ensure numbers for coordinates
+      updateData.location = {
+        type: "Point",
+        coordinates: [
+          Number(req.body["location.longitude"] || existingHotel.location?.coordinates[0] || 0),
+          Number(req.body["location.latitude"] || existingHotel.location?.coordinates[1] || 0)
+        ],
+        address: {
+          street: req.body["location.address.street"] || existingHotel.location?.address?.street || "",
+          city: req.body["location.address.city"] || req.body.city || existingHotel.location?.address?.city || "",
+          state: req.body["location.address.state"] || existingHotel.location?.address?.state || "",
+          country: req.body["location.address.country"] || req.body.country || existingHotel.location?.address?.country || "",
+          zipCode: req.body["location.address.zipCode"] || existingHotel.location?.address?.zipCode || "",
+        }
       };
 
       console.log("Update data:", updateData);

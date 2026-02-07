@@ -360,7 +360,7 @@ const VerificationsSection = () => {
                     <CheckCircle2 className="h-16 w-16 text-emerald-400" />
                 </div>
                 <h3 className="text-xl font-bold text-white">All caught up!</h3>
-                <p className="text-gray-400 mt-2">No pending owner verifications at this time.</p>
+                <p className="text-gray-400 mt-2">No pending identity verifications at this time.</p>
             </div>
         );
     }
@@ -370,7 +370,7 @@ const VerificationsSection = () => {
             {/* Sidebar */}
             <div className="lg:col-span-1 border border-white/10 rounded-3xl bg-white/5 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col">
                 <div className="p-5 border-b border-white/10 bg-white/5 flex items-center justify-between">
-                    <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest">Pending Owners</h3>
+                    <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest">Pending Verification</h3>
                     <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 font-black border border-blue-500/30">{verifications.length}</Badge>
                 </div>
                 <div className="flex-1 overflow-y-auto divide-y divide-white/5">
@@ -419,7 +419,7 @@ const VerificationsSection = () => {
                                     <div key={index} className="space-y-4">
                                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                             <ShieldAlert className="w-4 h-4 text-blue-400" />
-                                            {index === 0 ? "1. Personal Identity ID" : "2. Business Ownership Proof"}
+                                            {index === 0 ? "1. ID Front" : "2. ID Back"}
                                         </p>
                                         <div className="relative group aspect-video rounded-2xl border-2 border-white/10 overflow-hidden bg-black/20 backdrop-blur-sm shadow-xl">
                                             <img
@@ -449,7 +449,7 @@ const VerificationsSection = () => {
                                     <h4 className="text-sm font-black text-amber-300 uppercase tracking-wider mb-1">Reviewing Guidelines</h4>
                                     <p className="text-xs text-amber-200/80 leading-relaxed font-medium">
                                         Cross-verify the name on the ID with the user's profile name (<span className="font-black underline text-amber-100">{selectedUser.firstName} {selectedUser.lastName}</span>).
-                                        Ensure the Business Proof shows a valid GST/Registration matching the user's business context.
+                                        Ensure the documents are clear, valid, and match the user's identity.
                                     </p>
                                 </div>
                             </div>

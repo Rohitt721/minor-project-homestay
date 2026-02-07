@@ -1,6 +1,9 @@
 import express, { Request, Response } from "express";
 import { check, validationResult } from "express-validator";
 import User from "../models/user";
+import UserProfile from "../models/userProfile";
+import OwnerProfile from "../models/ownerProfile";
+import AdminProfile from "../models/adminProfile";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import verifyToken from "../middleware/auth";
@@ -86,18 +89,33 @@ router.post(
         }
       );
 
+      // Fetch profile data for response
+      const userId = user._id;
+      const userProfile = await UserProfile.findOne({ userId }).select("-_id -userId -__v -createdAt -updatedAt");
+
+      let ownerProfile = null;
+      if (user.role === "hotel_owner") {
+        ownerProfile = await OwnerProfile.findOne({ userId }).select("-_id -userId -__v -createdAt -updatedAt");
+      }
+
+      let adminProfile = null;
+      if (user.role === "admin") {
+        adminProfile = await AdminProfile.findOne({ userId }).select("-_id -userId -__v -createdAt -updatedAt");
+      }
+
+      const combinedUser = {
+        ...user.toObject(),
+        ...(userProfile ? userProfile.toObject() : {}),
+        ...(ownerProfile ? ownerProfile.toObject() : {}),
+        ...(adminProfile ? adminProfile.toObject() : {}),
+      };
+
       // Return JWT token in response body for localStorage storage
       res.status(200).json({
         userId: user._id,
         message: "Login successful",
         token: token, // JWT token in response body
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-        },
+        user: combinedUser,
       });
     } catch (error) {
       console.log(error);
@@ -216,15 +234,24 @@ router.post("/google-login", async (req: Request, res: Response) => {
         lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "User";
       }
 
+      // Create User (Auth)
       user = new User({
         email,
-        firstName: firstName || "Google",
-        lastName: lastName || "User",
         emailVerified: true,
       });
 
       try {
         await user.save();
+
+        // Create UserProfile
+        const userProfile = new UserProfile({
+          userId: user._id,
+          firstName: firstName || "Google",
+          lastName: lastName || "User",
+          profileImage: picture || ""
+        });
+        await userProfile.save();
+
         console.log(`✅ New user created successfully: ${user._id}`);
       } catch (saveError) {
         console.error("❌ Error saving new Google user:", saveError);
@@ -232,6 +259,7 @@ router.post("/google-login", async (req: Request, res: Response) => {
       }
     } else {
       console.log(`✅ Existing user found: ${user._id}`);
+      // Ideally check if UserProfile exists for existing users (migration logic), but skipping for now
     }
 
     const token = jwt.sign(
@@ -244,17 +272,32 @@ router.post("/google-login", async (req: Request, res: Response) => {
 
     console.log("✅ JWT generated for Google user");
 
+    // Fetch complete profile for response
+    const userId = user._id;
+    const userProfile = await UserProfile.findOne({ userId }).select("-_id -userId -__v -createdAt -updatedAt");
+
+    let ownerProfile = null;
+    if (user.role === "hotel_owner") {
+      ownerProfile = await OwnerProfile.findOne({ userId }).select("-_id -userId -__v -createdAt -updatedAt");
+    }
+
+    let adminProfile = null;
+    if (user.role === "admin") {
+      adminProfile = await AdminProfile.findOne({ userId }).select("-_id -userId -__v -createdAt -updatedAt");
+    }
+
+    const combinedUser = {
+      ...user.toObject(),
+      ...(userProfile ? userProfile.toObject() : {}),
+      ...(ownerProfile ? ownerProfile.toObject() : {}),
+      ...(adminProfile ? adminProfile.toObject() : {}),
+    };
+
     res.status(200).json({
       userId: user._id,
       message: "Login successful",
       token: token,
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
+      user: combinedUser,
     });
   } catch (error) {
     console.error("❌ Google Login Final Failure:", error);
@@ -266,3 +309,4 @@ router.post("/google-login", async (req: Request, res: Response) => {
 });
 
 export default router;
+

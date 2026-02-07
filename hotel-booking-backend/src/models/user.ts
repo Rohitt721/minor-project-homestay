@@ -13,29 +13,12 @@ const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true, index: true },
     password: { type: String },
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    // New fields for better user management
+    // Names moved to UserProfile
+    // role remains here for auth logic
     role: {
       type: String,
       enum: ["user", "admin", "hotel_owner"],
       default: "user",
-    },
-    phone: { type: String },
-    address: {
-      street: String,
-      city: String,
-      state: String,
-      country: String,
-      zipCode: String,
-    },
-    preferences: {
-      preferredDestinations: [String],
-      preferredHotelTypes: [String],
-      budgetRange: {
-        min: Number,
-        max: Number,
-      },
     },
     // Analytics and tracking fields
     totalBookings: { type: Number, default: 0 },
@@ -43,16 +26,17 @@ const userSchema = new mongoose.Schema(
     lastLogin: { type: Date },
     isActive: { type: Boolean, default: true },
     emailVerified: { type: Boolean, default: false },
-    // Verification System
+    // Verification documents for identity verification
     verification: {
       status: {
         type: String,
         enum: ["PENDING", "SUBMITTED", "VERIFIED", "REJECTED"],
         default: "PENDING",
       },
-      documents: { type: [verificationDocumentSchema], default: [] },
-      rejectionReason: String,
+      documents: [verificationDocumentSchema],
+      rejectionReason: { type: String },
     },
+    // Profile data moved to UserProfile / OwnerProfile
     // Audit fields
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },

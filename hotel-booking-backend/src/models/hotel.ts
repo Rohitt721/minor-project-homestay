@@ -27,15 +27,23 @@ const hotelSchema = new mongoose.Schema(
     // bookings: [bookingSchema],
 
     // New fields for better hotel management and analytics
+    // New fields for better hotel management and analytics
     location: {
-      latitude: Number,
-      longitude: Number,
+      type: {
+        type: String,
+        enum: ["Point"],
+        required: true,
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
       address: {
-        street: String,
-        city: String,
-        state: String,
-        country: String,
-        zipCode: String,
+        street: { type: String, required: true },
+        city: { type: String, required: true },
+        state: { type: String, required: true },
+        country: { type: String, required: true },
+        zipCode: { type: String, required: true },
       },
     },
     contact: {
@@ -79,6 +87,7 @@ const hotelSchema = new mongoose.Schema(
 );
 
 // Add compound indexes for better query performance
+hotelSchema.index({ location: "2dsphere" });
 hotelSchema.index({ city: 1, starRating: 1 });
 hotelSchema.index({ pricePerNight: 1, starRating: 1 });
 hotelSchema.index({ userId: 1, createdAt: -1 });

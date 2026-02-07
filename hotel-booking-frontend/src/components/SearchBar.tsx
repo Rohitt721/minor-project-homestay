@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent } from "./ui/card";
+import * as apiClient from "../api-client";
 
 const SearchBar = () => {
   const navigate = useNavigate();
@@ -52,20 +53,12 @@ const SearchBar = () => {
           }
         }
 
-        const apiBaseUrl =
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:7002";
-        const response = await fetch(`${apiBaseUrl}/api/hotels`);
+        const data = await apiClient.fetchHotels();
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data: { city?: string; place?: string; name?: string }[] =
-          await response.json();
         const uniquePlaces: string[] = Array.from(
           new Set(
             data
-              .map((hotel) => hotel.city || hotel.place || hotel.name)
+              .map((hotel) => hotel.city || hotel.name)
               .filter(
                 (place): place is string =>
                   typeof place === "string" && place.length > 0

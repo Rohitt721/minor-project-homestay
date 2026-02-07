@@ -27,6 +27,8 @@ import MyGuests from "./pages/MyGuests";
 import AdminDashboard from "./pages/AdminDashboard";
 import VerificationPage from "./pages/VerificationPage";
 import Ranking from "./pages/Ranking";
+import Profile from "./pages/Profile";
+import TripPlanner from "./pages/TripPlanner";
 
 const App = () => {
   const { isLoggedIn } = useAppContext();
@@ -79,6 +81,14 @@ const App = () => {
           element={
             <Layout>
               <AnalyticsDashboard />
+            </Layout>
+          }
+        />
+        <Route
+          path="/trip-planner"
+          element={
+            <Layout>
+              <TripPlanner />
             </Layout>
           }
         />
@@ -141,7 +151,7 @@ const App = () => {
           }
         />
         <Route
-          path="/verification"
+          path="/verify-identity"
           element={
             <Layout>
               {isLoggedIn ? <VerificationPage /> : <Navigate to="/sign-in" />}
@@ -177,6 +187,14 @@ const App = () => {
           element={
             <Layout>
               {isLoggedIn ? <Ranking /> : <Navigate to="/sign-in" />}
+            </Layout>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <Layout>
+              {isLoggedIn ? <Profile /> : <Navigate to="/sign-in" />}
             </Layout>
           }
         />

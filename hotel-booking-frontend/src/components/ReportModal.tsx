@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { AlertTriangle, X, Loader2, Upload, FileText, Image as ImageIcon } from "lucide-react";
+import * as apiClient from "../api-client";
 import { BookingType } from "../../../shared/types";
 import {
     Dialog,
@@ -151,41 +152,7 @@ const ReportModal = ({ isOpen, onClose, booking, hotelName, hotelId, ownerId }: 
                 formData.append("evidence", file);
             });
 
-            // Get token from localStorage (auth strategy uses JWT in localStorage)
-            const token = localStorage.getItem("session_id");
-            console.log("🔑 Auth Token present:", !!token);
-
-            const requestUrl = `${import.meta.env.VITE_API_BASE_URL || ""}/api/reports`;
-            console.log("➡️ Sending POST request to:", requestUrl);
-
-            const headers: HeadersInit = {};
-            if (token) {
-                headers["Authorization"] = `Bearer ${token}`;
-            }
-
-            const response = await fetch(requestUrl, {
-                method: "POST",
-                headers: headers,
-                body: formData,
-                // credentials: "include" is risky if backend doesn't handle CORS correctly for it + header
-                // but usually fine. For safety with JWT, header is key.
-            });
-
-            console.log("⬅️ Response received:", response.status, response.statusText);
-
-            if (!response.ok) {
-                // Try to parse JSON, but handle HTML/text errors (like 404s)
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    const errorData = await response.json();
-                    console.error("❌ API Error JSON:", errorData);
-                    throw new Error(errorData.message || "Failed to submit report");
-                } else {
-                    const errorText = await response.text();
-                    console.error("❌ API Error Text:", errorText);
-                    throw new Error(`Server error (${response.status}): ${response.statusText}`);
-                }
-            }
+            await apiClient.submitReport(formData);
 
             console.log("✅ Report submitted successfully");
             showToast({ title: "Report submitted successfully! We'll review it shortly.", type: "SUCCESS" });

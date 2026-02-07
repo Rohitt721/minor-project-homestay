@@ -20,29 +20,25 @@ router.post(
     "/upload",
     verifyToken,
     upload.fields([
-        { name: "personalIdFront", maxCount: 1 },
-        { name: "businessProof", maxCount: 1 }
+        { name: "idFront", maxCount: 1 },
+        { name: "idBack", maxCount: 1 }
     ]),
     async (req: Request, res: Response) => {
         try {
-            console.log("Upload request received");
-            console.log("Headers:", req.headers);
+            console.log("Identity verification upload request received");
 
             if (!req.files) {
-                console.log("No files object found in request");
                 return res.status(400).json({ message: "No files were uploaded" });
             }
 
             const files = req.files as { [fieldname: string]: Express.Multer.File[] };
             const imageFiles: Express.Multer.File[] = [];
 
-            if (files && files.personalIdFront) imageFiles.push(files.personalIdFront[0]);
-            if (files && files.businessProof) imageFiles.push(files.businessProof[0]);
-
-            console.log("Received files for verification:", imageFiles.length);
+            if (files && files.idFront) imageFiles.push(files.idFront[0]);
+            if (files && files.idBack) imageFiles.push(files.idBack[0]);
 
             if (imageFiles.length === 0) {
-                return res.status(400).json({ message: "No files uploaded. Make sure to select both personal ID and business proof." });
+                return res.status(400).json({ message: "No files uploaded. Please select both front and back (optional) ID images." });
             }
 
             // Convert to Data URIs (Matches hotel pattern in this project)
@@ -53,7 +49,7 @@ router.post(
                 return {
                     url: dataURI,
                     name: image.originalname,
-                    documentType: "document",
+                    documentType: req.body.idType || "Aadhaar",
                     uploadedAt: new Date(),
                 };
             });

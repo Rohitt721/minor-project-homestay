@@ -1,10 +1,7 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import useAppContext from "../hooks/useAppContext";
 import useSearchContext from "../hooks/useSearchContext";
-import SignOutButton from "./SignOutButton";
 import {
-  FileText,
-  Activity,
   BarChart3,
   Building2,
   Calendar,
@@ -16,6 +13,8 @@ import {
   ShieldAlert,
   Hotel,
   Trophy,
+  User,
+  Sparkles,
 } from "lucide-react";
 
 import { useQuery } from "react-query";
@@ -127,7 +126,19 @@ const Header = () => {
                         Hotels
                       </Link>
 
-                      <SignOutButton />
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-2 text-white/90 hover:text-white px-3 py-2 rounded-lg font-medium hover:bg-white/10 transition-all duration-200 group ml-2"
+                        title="My Profile"
+                      >
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 border border-white/20 flex items-center justify-center group-hover:border-white/40 transition-colors">
+                          {user?.profileImage ? (
+                            <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-4 h-4" />
+                          )}
+                        </div>
+                      </Link>
                     </>
                   ) : (
                     <>
@@ -185,14 +196,24 @@ const Header = () => {
                           )}
                         </Link>
                       ) : (
-                        <Link
-                          className="flex items-center text-white/90 hover:text-white px-4 py-2 rounded-lg font-medium hover:bg-white/10 transition-all duration-200 group"
-                          to="/my-bookings"
-                        >
-                          <Calendar className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                          My Bookings
-                        </Link>
+                        <>
+                          <Link
+                            className="flex items-center text-white/90 hover:text-white px-4 py-2 rounded-lg font-medium hover:bg-white/10 transition-all duration-200 group"
+                            to="/my-bookings"
+                          >
+                            <Calendar className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                            My Bookings
+                          </Link>
+                          <Link
+                            className="flex items-center text-white/90 hover:text-white px-4 py-2 rounded-lg font-medium hover:bg-white/10 transition-all duration-200 group"
+                            to="/trip-planner"
+                          >
+                            <Sparkles className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform text-yellow-300" />
+                            Trip Planner
+                          </Link>
+                        </>
                       )}
+
                       {/* My Hotels Link - Only for hotel owners */}
                       {isHotelOwner && (
                         <Link
@@ -204,7 +225,20 @@ const Header = () => {
                         </Link>
                       )}
 
-                      <SignOutButton />
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-2 text-white/90 hover:text-white px-3 py-2 rounded-lg font-medium hover:bg-white/10 transition-all duration-200 group ml-2"
+                        title="My Profile"
+                      >
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-white/20 border border-white/20 flex items-center justify-center group-hover:border-white/40 transition-colors">
+                          {user?.profileImage ? (
+                            <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="w-4 h-4" />
+                          )}
+                        </div>
+                        <span className="hidden lg:block text-sm font-bold">{user?.firstName}</span>
+                      </Link>
                     </>
                   )}
                 </>

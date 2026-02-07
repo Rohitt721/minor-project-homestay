@@ -22,7 +22,8 @@ import {
   Zap,
   Moon,
   Info,
-  Check
+  Check,
+  ShieldCheck
 } from "lucide-react";
 import { useQuery } from "react-query";
 import * as apiClient from "../../api-client";
@@ -173,9 +174,25 @@ const GuestInfoForm = ({ hotelId, pricePerNight, pricePerHour }: Props) => {
   const maxDate = new Date();
   maxDate.setFullYear(maxDate.getFullYear() + 1);
 
+  // Fetch verification status
+  const { data: verificationStatus } = useQuery(
+    "verificationStatus",
+    apiClient.fetchVerificationStatus,
+    {
+      enabled: isLoggedIn,
+    }
+  );
+
+  const isVerified = verificationStatus?.status === "VERIFIED";
+
   const onSignInClick = (data: GuestInfoFormData) => {
     search.saveSearchValues("", data.checkIn, data.checkOut, data.adultCount, data.childCount);
     navigate("/sign-in", { state: { from: location } });
+  };
+
+  const onVerifyClick = (data: GuestInfoFormData) => {
+    search.saveSearchValues("", data.checkIn, data.checkOut, data.adultCount, data.childCount);
+    navigate("/verify-identity");
   };
 
   const onSubmit = (data: GuestInfoFormData) => {
@@ -316,7 +333,13 @@ const GuestInfoForm = ({ hotelId, pricePerNight, pricePerHour }: Props) => {
           </div>
 
           <form
-            onSubmit={isLoggedIn ? handleSubmit(onSubmit) : handleSubmit(onSignInClick)}
+            onSubmit={
+              !isLoggedIn
+                ? handleSubmit(onSignInClick)
+                : !isVerified
+                  ? handleSubmit(onVerifyClick)
+                  : handleSubmit(onSubmit)
+            }
             className="space-y-5"
           >
             <div className="space-y-4 bg-gray-50/50 p-5 rounded-[2rem] border border-gray-100/50">
@@ -388,19 +411,30 @@ const GuestInfoForm = ({ hotelId, pricePerNight, pricePerHour }: Props) => {
             <button
               type="submit"
               disabled={isAvailabilityLoading}
-              className="group relative w-full h-16 rounded-[1.5rem] bg-indigo-600 overflow-hidden shadow-xl shadow-indigo-200 hover:shadow-2xl hover:shadow-indigo-300 transition-all duration-300 active:scale-95 disabled:opacity-50"
+              className={cn(
+                "group relative w-full h-16 rounded-[1.5rem] overflow-hidden shadow-xl transition-all duration-300 active:scale-95 disabled:opacity-50",
+                !isLoggedIn ? "bg-gray-800" : !isVerified ? "bg-amber-600 shadow-amber-200" : "bg-indigo-600 shadow-indigo-200 hover:shadow-2xl hover:shadow-indigo-300"
+              )}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className={cn(
+                "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+                !isLoggedIn ? "bg-gray-700" : !isVerified ? "bg-amber-500" : "bg-gradient-to-r from-indigo-500 to-purple-600"
+              )} />
               <div className="relative flex items-center justify-center gap-3 text-white font-black text-lg tracking-tight">
-                {isLoggedIn ? (
-                  <>
-                    <Check className="h-5 w-5" />
-                    Book {units} {bookingType === 'nightly' ? (units === 1 ? 'Night' : 'Nights') : (units === 1 ? 'Hour' : 'Hours')}
-                  </>
-                ) : (
+                {!isLoggedIn ? (
                   <>
                     <User className="h-5 w-5" />
                     Sign in to Continue
+                  </>
+                ) : !isVerified ? (
+                  <>
+                    <ShieldCheck className="h-5 w-5" />
+                    Verify Identity to Book
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-5 w-5" />
+                    Book {units} {bookingType === 'nightly' ? (units === 1 ? 'Night' : 'Nights') : (units === 1 ? 'Hour' : 'Hours')}
                   </>
                 )}
               </div>

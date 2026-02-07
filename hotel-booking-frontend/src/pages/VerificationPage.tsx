@@ -32,17 +32,17 @@ import {
 
 type VerificationFormData = {
     idType: string;
-    personalIdFront: FileList;
-    businessProof: FileList;
+    idFront: FileList;
+    idBack: FileList;
 };
 
-const VerificationPage = () => {
+const IdentityVerification = () => {
     const navigate = useNavigate();
     const { showToast } = useAppContext();
     const queryClient = useQueryClient();
 
-    const [personalPreview, setPersonalPreview] = useState<string | null>(null);
-    const [businessPreview, setBusinessPreview] = useState<string | null>(null);
+    const [frontPreview, setFrontPreview] = useState<string | null>(null);
+    const [backPreview, setBackPreview] = useState<string | null>(null);
 
     const { data: statusData, isLoading } = useQuery(
         "verificationStatus",
@@ -78,7 +78,7 @@ const VerificationPage = () => {
         }
     });
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: "personal" | "business") => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: "front" | "back") => {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
@@ -88,8 +88,8 @@ const VerificationPage = () => {
 
             const reader = new FileReader();
             reader.onloadend = () => {
-                if (field === "personal") setPersonalPreview(reader.result as string);
-                else setBusinessPreview(reader.result as string);
+                if (field === "front") setFrontPreview(reader.result as string);
+                else setBackPreview(reader.result as string);
             };
             reader.readAsDataURL(file);
         }
@@ -99,15 +99,13 @@ const VerificationPage = () => {
         console.log("Submitting verification form", data);
         const formData = new FormData();
 
-        // Append all files to "documents" array as expected by backend
-        if (data.personalIdFront?.[0]) {
-            console.log("Appending personalIdFront:", data.personalIdFront[0].name);
-            formData.append("personalIdFront", data.personalIdFront[0]);
+        if (data.idFront?.[0]) {
+            formData.append("idFront", data.idFront[0]);
         }
-        if (data.businessProof?.[0]) {
-            console.log("Appending businessProof:", data.businessProof[0].name);
-            formData.append("businessProof", data.businessProof[0]);
+        if (data.idBack?.[0]) {
+            formData.append("idBack", data.idBack[0]);
         }
+        formData.append("idType", data.idType);
 
         mutate(formData);
     });
@@ -129,7 +127,7 @@ const VerificationPage = () => {
                     <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-blue-600 shadow-inner">
                         <UserCheck className="w-8 h-8" />
                     </div>
-                    <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">Owner Verification</CardTitle>
+                    <CardTitle className="text-3xl font-black text-gray-900 tracking-tight">Identity Verification</CardTitle>
                     <CardDescription className="text-md mt-2 font-medium">
                         Verification Status:
                         <span className={`ml-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest shadow-sm
@@ -148,10 +146,10 @@ const VerificationPage = () => {
                             <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-green-50">
                                 <CheckCircle2 className="w-12 h-12 text-green-500" />
                             </div>
-                            <h3 className="text-3xl font-bold text-gray-900 mb-2">Account Verified</h3>
-                            <p className="text-gray-600 mb-8 max-w-sm mx-auto">Your identity documents have been approved. You can now subscribe to premium plans and manage your hotels.</p>
-                            <Button onClick={() => navigate("/subscription")} className="w-full sm:w-auto px-10 py-6 text-lg font-bold bg-green-600 hover:bg-green-700 shadow-lg">
-                                Go to Subscriptions
+                            <h3 className="text-3xl font-bold text-gray-900 mb-2">Identity Verified</h3>
+                            <p className="text-gray-600 mb-8 max-w-sm mx-auto">Your identity documents have been approved. You can now book hotels and enjoy our services.</p>
+                            <Button onClick={() => navigate("/")} className="w-full sm:w-auto px-10 py-6 text-lg font-bold bg-green-600 hover:bg-green-700 shadow-lg">
+                                Explore Hotels
                             </Button>
                         </div>
                     )}
@@ -169,7 +167,6 @@ const VerificationPage = () => {
 
                     {(status === "PENDING" || status === "REJECTED") && (
                         <form onSubmit={onSubmit} className="space-y-8">
-                            {/* ID Type Selection */}
                             <div className="space-y-3">
                                 <Label className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center">
                                     <CreditCard className="w-4 h-4 mr-2 text-primary-600" />
@@ -186,26 +183,24 @@ const VerificationPage = () => {
                                         <SelectItem value="Aadhaar">Aadhaar Card (Recommended)</SelectItem>
                                         <SelectItem value="Passport">Passport</SelectItem>
                                         <SelectItem value="Driving License">Driving License</SelectItem>
-                                        <SelectItem value="PAN Card">PAN Card & Business Registration</SelectItem>
+                                        <SelectItem value="Voter ID">Voter ID</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
 
-                            {/* Dual Upload Section */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Personal ID */}
                                 <div className="space-y-3">
                                     <Label className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-                                        1. Personal ID (Front)
+                                        1. ID Front
                                     </Label>
                                     <div className={`relative border-2 border-dashed rounded-2xl p-4 transition-all h-[200px] flex items-center justify-center
-                                        ${personalPreview ? 'border-primary-500 bg-primary-50/20' : 'border-gray-200 hover:border-blue-400 bg-gray-50/50'}`}>
-                                        {personalPreview ? (
+                                        ${frontPreview ? 'border-primary-500 bg-primary-50/20' : 'border-gray-200 hover:border-blue-400 bg-gray-50/50'}`}>
+                                        {frontPreview ? (
                                             <div className="relative w-full h-full">
-                                                <img src={personalPreview} className="w-full h-full object-cover rounded-xl shadow-md" alt="ID Preview" />
+                                                <img src={frontPreview} className="w-full h-full object-cover rounded-xl shadow-md" alt="ID Preview" />
                                                 <button
                                                     type="button"
-                                                    onClick={() => setPersonalPreview(null)}
+                                                    onClick={() => setFrontPreview(null)}
                                                     className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1.5 shadow-xl hover:bg-red-600 transition-colors"
                                                 >
                                                     <X className="w-4 h-4" />
@@ -216,36 +211,35 @@ const VerificationPage = () => {
                                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                     <FileUp className="w-6 h-6 text-primary-500" />
                                                 </div>
-                                                <span className="text-sm font-bold text-gray-600">Upload ID Front</span>
+                                                <span className="text-sm font-bold text-gray-600">Upload Front Side</span>
                                                 <span className="text-xs text-gray-400 mt-1">PNG, JPG or PDF</span>
                                                 <input
                                                     type="file"
                                                     className="hidden"
                                                     accept="image/*,application/pdf"
-                                                    {...register("personalIdFront", {
-                                                        required: "Front id is required",
-                                                        onChange: (e) => handleFileChange(e, "personal")
+                                                    {...register("idFront", {
+                                                        required: "Front side ID is required",
+                                                        onChange: (e) => handleFileChange(e, "front")
                                                     })}
                                                 />
                                             </label>
                                         )}
                                     </div>
-                                    {errors.personalIdFront && <p className="text-xs text-red-500 font-bold ml-1">{errors.personalIdFront.message}</p>}
+                                    {errors.idFront && <p className="text-xs text-red-500 font-bold ml-1">{errors.idFront.message}</p>}
                                 </div>
 
-                                {/* Business Proof */}
                                 <div className="space-y-3">
                                     <Label className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-                                        2. Business Proof
+                                        2. ID Back (Optional)
                                     </Label>
                                     <div className={`relative border-2 border-dashed rounded-2xl p-4 transition-all h-[200px] flex items-center justify-center
-                                        ${businessPreview ? 'border-primary-500 bg-primary-50/20' : 'border-gray-200 hover:border-blue-400 bg-gray-50/50'}`}>
-                                        {businessPreview ? (
+                                        ${backPreview ? 'border-primary-500 bg-primary-50/20' : 'border-gray-200 hover:border-blue-400 bg-gray-50/50'}`}>
+                                        {backPreview ? (
                                             <div className="relative w-full h-full">
-                                                <img src={businessPreview} className="w-full h-full object-cover rounded-xl shadow-md" alt="Business Preview" />
+                                                <img src={backPreview} className="w-full h-full object-cover rounded-xl shadow-md" alt="Back Preview" />
                                                 <button
                                                     type="button"
-                                                    onClick={() => setBusinessPreview(null)}
+                                                    onClick={() => setBackPreview(null)}
                                                     className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1.5 shadow-xl hover:bg-red-600 transition-colors"
                                                 >
                                                     <X className="w-4 h-4" />
@@ -256,31 +250,28 @@ const VerificationPage = () => {
                                                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                     <Upload className="w-6 h-6 text-primary-500" />
                                                 </div>
-                                                <span className="text-sm font-bold text-gray-600">Upload Business Proof</span>
-                                                <span className="text-xs text-gray-400 mt-1">Registration/Tax Doc</span>
+                                                <span className="text-sm font-bold text-gray-600">Upload Back Side</span>
+                                                <span className="text-xs text-gray-400 mt-1">PNG, JPG or PDF</span>
                                                 <input
                                                     type="file"
                                                     className="hidden"
                                                     accept="image/*,application/pdf"
-                                                    {...register("businessProof", {
-                                                        required: "Business proof is required",
-                                                        onChange: (e) => handleFileChange(e, "business")
+                                                    {...register("idBack", {
+                                                        onChange: (e) => handleFileChange(e, "back")
                                                     })}
                                                 />
                                             </label>
                                         )}
                                     </div>
-                                    {errors.businessProof && <p className="text-xs text-red-500 font-bold ml-1">{errors.businessProof.message}</p>}
                                 </div>
                             </div>
 
-                            {/* Privacy Notice */}
                             <div className="bg-amber-50 rounded-2xl p-5 flex gap-4 border border-amber-100 shadow-sm transition-all hover:bg-amber-100/50">
                                 <ShieldCheck className="w-8 h-8 text-amber-600 shrink-0" />
                                 <div className="space-y-1">
                                     <h4 className="text-sm font-bold text-amber-900">Privacy & Security Disclaimer</h4>
                                     <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                                        Your documents are encrypted and stored securely. They will only be used for platform verification and legally required audit purposes. We do not share your private data with third parties.
+                                        Your documents are encrypted and stored securely. They will only be used for platform verification Purposes. We do not share your private data with third parties.
                                     </p>
                                 </div>
                             </div>
@@ -313,10 +304,10 @@ const VerificationPage = () => {
                             </div>
                             <h3 className="text-3xl font-extrabold text-gray-900 mb-4 tracking-tight">Review in Progress</h3>
                             <p className="text-gray-600 max-w-sm mx-auto text-lg leading-relaxed">
-                                Our admin team is currently reviewing your documents. You will receive an email and notification once your account status is updated.
+                                Our admin team is currently reviewing your identity documents. You will be able to book once your account is verified.
                             </p>
                             <div className="mt-10 p-4 bg-gray-50 rounded-xl inline-block border border-gray-100">
-                                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Typical response time: 24-48 Hours</p>
+                                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Typical response time: 2-4 Hours</p>
                             </div>
                         </div>
                     )}
@@ -324,11 +315,11 @@ const VerificationPage = () => {
 
                 <CardFooter className="bg-gray-50 border-t py-6 flex justify-center text-gray-400 text-xs font-bold tracking-widest uppercase">
                     <ShieldCheck className="w-4 h-4 mr-2" />
-                    Trusted & Secured Verification System
+                    Trusted & Secured Identity Verification
                 </CardFooter>
             </Card>
         </div>
     );
 };
 
-export default VerificationPage;
+export default IdentityVerification;

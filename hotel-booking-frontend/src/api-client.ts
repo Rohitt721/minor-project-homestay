@@ -16,6 +16,15 @@ export const fetchCurrentUser = async (): Promise<UserType> => {
   return response.data;
 };
 
+export const updateUserProfile = async (formData: FormData): Promise<UserType> => {
+  const response = await axiosInstance.put("/api/profile", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};
+
 export const register = async (formData: RegisterFormData) => {
   const response = await axiosInstance.post("/api/users/register", formData);
   return response.data;
@@ -394,3 +403,107 @@ export const updateReportStatus = async (reportId: string, status: "Open" | "In 
   const response = await axiosInstance.put(`/api/reports/${reportId}/status`, { status });
   return response.data;
 };
+
+export const submitReport = async (reportData: FormData) => {
+  const response = await axiosInstance.post("/api/reports", reportData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+};
+
+// ============ Trip Planner APIs ============
+
+export interface TripPlanInput {
+  destination: string;
+  startDate: string;
+  duration: number;
+  travelStyle: "adventure" | "cultural" | "relaxation" | "food" | "mixed";
+  budget: "budget" | "moderate" | "luxury";
+  mustVisitPlaces?: string[];
+}
+
+export interface DayActivity {
+  time: string;
+  activity: string;
+  location: string;
+  description: string;
+}
+
+export interface HotelRecommendation {
+  hotelId: string;
+  name: string;
+  pricePerNight: number;
+  starRating: number;
+  distance?: string;
+  availabilityStatus: "available" | "limited" | "unavailable";
+  imageUrl?: string;
+  city: string;
+}
+
+export interface DayPlan {
+  day: number;
+  date: string;
+  activities: DayActivity[];
+  areaName: string;
+  hotels: HotelRecommendation[];
+  fallbackMessage?: string;
+}
+
+export interface TripPlan {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  duration: number;
+  travelStyle: string;
+  budget: string;
+  days: DayPlan[];
+  summary: string;
+}
+
+export interface TravelStyle {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface BudgetOption {
+  id: string;
+  name: string;
+  description: string;
+  priceRange: string;
+  icon: string;
+}
+
+export const generateTripPlan = async (input: TripPlanInput): Promise<TripPlan> => {
+  const response = await axiosInstance.post("/api/trip-planner/generate", input);
+  return response.data;
+};
+
+export const getTravelStyles = async (): Promise<TravelStyle[]> => {
+  const response = await axiosInstance.get("/api/trip-planner/travel-styles");
+  return response.data;
+};
+
+export const getBudgetOptions = async (): Promise<BudgetOption[]> => {
+  const response = await axiosInstance.get("/api/trip-planner/budget-options");
+  return response.data;
+};
+
+export const getAlternateHotels = async (
+  destination: string,
+  checkIn: string,
+  checkOut: string,
+  budget: string
+): Promise<{ hotels: HotelRecommendation[] }> => {
+  const response = await axiosInstance.post("/api/trip-planner/alternate-hotels", {
+    destination,
+    checkIn,
+    checkOut,
+    budget,
+  });
+  return response.data;
+};
+
