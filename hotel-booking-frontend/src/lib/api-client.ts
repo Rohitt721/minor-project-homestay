@@ -13,7 +13,7 @@ const getBaseURL = () => {
   }
 
   if (window.location.hostname === "localhost") {
-    return "http://localhost:7003";
+    return "http://localhost:7002";
   }
 
   // Default to production
